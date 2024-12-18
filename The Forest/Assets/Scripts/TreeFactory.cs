@@ -80,19 +80,14 @@ public class TreeFactory : MonoBehaviour
         kdTree.Rebuild();
     }
 
-    private float NearestTreeDistance(Vector3 pos) 
+    private float NearestTreeDistance(Vector2 pos) 
     {
-        // TODO: Replace this with a KD Tree
-        float nearest = float.PositiveInfinity;
-        for (int i = 0; i < transform.childCount; i++)
+        if (kdTree.Count == 0)
         {
-            Transform t = transform.GetChild(i);
-
-            float d = (t.localPosition - pos).magnitude;
-            nearest = Mathf.Min(nearest, d);
+            return float.PositiveInfinity;
         }
-
-        return nearest;
+        Vertex v = kdTree.Nearest(pos);
+        return Vector2.Distance(v.position, pos);
     }
 #endregion Init
 

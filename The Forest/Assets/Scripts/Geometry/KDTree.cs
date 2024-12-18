@@ -70,6 +70,11 @@ public class KDTree
     private KDNode root = null;
     private int dimension;
     private Rect bounds;
+    private int count = 0;
+#endregion
+
+#region Properties
+    public int Count { get { return count; } }
 #endregion
 
 #region Constructors
@@ -78,6 +83,7 @@ public class KDTree
         dimension = 2;
         comparers = MakeComparers(dimension);
         bounds = MakeBounds();
+        count = 0;
         root = null;
     }
 
@@ -86,6 +92,7 @@ public class KDTree
         dimension = 2;
         comparers = MakeComparers(dimension);
         bounds = MakeBounds(vertices);
+        count = vertices.Length;
         root = MakeTree(vertices, 0, vertices.Length, 0);
     }
 
@@ -168,6 +175,8 @@ public class KDTree
 
     public void AddVertex(Vertex v)
     {
+        count++;
+      
         if (root == null) 
         {
             root = new KDNode(v, 0);
