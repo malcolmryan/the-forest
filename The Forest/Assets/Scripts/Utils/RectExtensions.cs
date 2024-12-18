@@ -105,15 +105,19 @@ public static class RectExtensions  {
 		return r;
 	}
 
-	public static void DrawGizmo(this Rect r) {
-		for (int i = 0; i < 4; i++) {
-			Gizmos.DrawLine(r.Corner(i), r.Corner(i+1));
-		}
-	}
+	public static void DrawGizmo(this Rect r, Transform t = null) {
 
-	public static void DrawGizmo(this Rect r, Transform t) {
-		for (int i = 0; i < 4; i++) {
-			Gizmos.DrawLine(t.TransformPoint(r.Corner(i)), t.TransformPoint(r.Corner(i+1)));
+		if (t == null) 
+		{
+			for (int i = 0; i < 4; i++) {
+				Gizmos.DrawLine(r.Corner(i), r.Corner(i+1));
+			}
+		}
+		else 
+		{
+			for (int i = 0; i < 4; i++) {
+				Gizmos.DrawLine(t.TransformPoint(r.Corner(i)), t.TransformPoint(r.Corner(i+1)));
+			}
 		}
 	}
 
