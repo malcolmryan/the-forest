@@ -8,9 +8,15 @@
 
 using UnityEngine;
 using WordsOnPlay.Utils;
+using WordsOnPlay.Geometry;
 
 public class TreeFactory : MonoBehaviour
 {
+
+#region Singleton
+    private static TreeFactory instance = null;
+    public static TreeFactory Instance { get { return instance; } }
+#endregion 
 
 #region Parameters
     [SerializeField] private Rect rect;
@@ -20,11 +26,21 @@ public class TreeFactory : MonoBehaviour
 #endregion 
 
 #region State
+    private Vertex[] vertices;
+    private KDTree kdTree;
 #endregion
 
 #region Init & Destroy
     void Awake()
     {
+        if (instance != null)
+        {
+            Debug.LogError("There are multiple TreeFactories in the Scene.");
+        }
+        instance = this;
+
+        vertices = new Vertex[nTrees];
+        kdTree = new KDTree();
         GenerateTrees();
     }
 
@@ -57,7 +73,11 @@ public class TreeFactory : MonoBehaviour
             TreeShadow tree = Instantiate(
                 treePrefab, transform.position, Quaternion.identity, transform);
             tree.transform.localPosition = pos;
+            vertices[i] = new Vertex(pos);
+            kdTree.AddVertex(vertices[i]);
         }
+
+        kdTree.Rebuild();
     }
 
     private float NearestTreeDistance(Vector3 pos) 
@@ -65,7 +85,6 @@ public class TreeFactory : MonoBehaviour
         // TODO: Replace this with a KD Tree
         float nearest = float.PositiveInfinity;
         for (int i = 0; i < transform.childCount; i++)
-
         {
             Transform t = transform.GetChild(i);
 
@@ -77,23 +96,26 @@ public class TreeFactory : MonoBehaviour
     }
 #endregion Init
 
-#region Update
-    void Update()
+#region Public Methods
+    public Vector2 NearestTree(Vector2 pos) 
     {
+        pos = transform.InverseTransformPoint(pos);
+        Vertex v = kdTree.Nearest(pos);
+        return transform.TransformPoint(v.position);
     }
-#endregion Update
-
-#region FixedUpdate
-    void FixedUpdate()
-    {        
-    }
-#endregion FixedUpdate
+#endregion
 
 #region Gizmos
     void OnDrawGizmos()
     {
         Gizmos.color = Color.green;
         rect.DrawGizmo(transform);
+
+        if (kdTree != null)
+        {
+            Gizmos.color = Color.yellow;
+            kdTree.DrawGizmo(transform);
+        }
     }
 #endregion Gizmos
 }

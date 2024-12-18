@@ -92,6 +92,12 @@ public class PlayerMove : MonoBehaviour
             // Don't run in the editor
             return;
         }
+
+        Vector2 pos = transform.position;
+        Vector2 tree = TreeFactory.Instance.NearestTree(pos);
+
+        Gizmos.color = Color.red;
+        Gizmos.DrawLine(pos, tree);
     }
 #endregion Gizmos
 }
