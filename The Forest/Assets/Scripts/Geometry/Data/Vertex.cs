@@ -19,6 +19,14 @@ public class Vertex
     {
         this.position = position;
     }
+
+    public static implicit operator Vector2(Vertex v) => v.position;
+
+    public static Vector2 operator -(Vertex v1, Vertex v2)
+    {
+        return v1.position - v2.position;
+    }
+
 }
 
 }
