@@ -6,13 +6,20 @@
  */
 
 using UnityEngine;
+using System;
 
 namespace WordsOnPlay.Geometry
 {
 
+[Serializable]
 public class Face 
 {
     public HalfEdge edge;
+
+    public Face(HalfEdge edge)
+    {
+        this.edge = edge;
+    }
 
     /// <summary>
     /// Test if a given point is inside the face.
@@ -21,7 +28,7 @@ public class Face
     /// <param name="point"></param>
     /// <returns></returns>
 
-    public bool IsInside(Vector2 point, bool strict = true)
+    public bool Contains(Vector2 point, bool strict = true)
     {
         HalfEdge e = edge;
 

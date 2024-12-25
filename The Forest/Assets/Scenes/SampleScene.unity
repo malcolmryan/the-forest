@@ -432,7 +432,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b4ed60513317d4370bd56bfc3831e949, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  rect:
+  bounds:
     serializedVersion: 2
     x: -50
     y: -50
@@ -441,6 +441,9 @@ MonoBehaviour:
   nTrees: 1000
   treePrefab: {fileID: -9146643041597534257, guid: 1c96c370b7f714f39bbaaf5cefaa5c71, type: 3}
   nFails: 10
+  drawBoundsGizmo: 1
+  drawKDTreeGizmo: 0
+  drawTriangulationGizmo: 1
 --- !u!114 &1148772230320278782
 MonoBehaviour:
   m_ObjectHideFlags: 0

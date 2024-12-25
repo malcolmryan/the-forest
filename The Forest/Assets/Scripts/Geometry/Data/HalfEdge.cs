@@ -10,16 +10,32 @@ using System;
 
 namespace WordsOnPlay.Geometry
 {
+
+[Serializable]
 public class HalfEdge 
 {
     public Vertex fromVertex;
     public HalfEdge prev;
     public HalfEdge next;
-    public HalfEdge opposite;
+    public HalfEdge flip;
     public Face face;
 
     public Vector2 Direction {
         get { return next.fromVertex - fromVertex; }
+    }
+    
+    public HalfEdge(Vertex fromVertex)
+    {
+        this.fromVertex = fromVertex;
+    }
+
+    public static HalfEdge CreateEdgePair(Vertex a, Vertex b) 
+    {
+        HalfEdge e = new HalfEdge(a);
+        e.flip = new HalfEdge(b);
+        e.flip.flip = e;
+
+        return e;
     }
 
     /// <summary>

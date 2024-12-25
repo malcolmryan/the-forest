@@ -19,7 +19,7 @@ public class TreeFactory : MonoBehaviour
 #endregion 
 
 #region Parameters
-    [SerializeField] private Rect rect;
+    [SerializeField] private Rect bounds;
     [SerializeField] private int nTrees;
     [SerializeField] private TreeShadow treePrefab;
     [SerializeField] private int nFails = 10;
@@ -28,6 +28,7 @@ public class TreeFactory : MonoBehaviour
 #region State
     private Vertex[] vertices;
     private KDTree kdTree;
+    private Triangulation triangulation;
 #endregion
 
 #region Init & Destroy
@@ -42,11 +43,12 @@ public class TreeFactory : MonoBehaviour
         vertices = new Vertex[nTrees];
         kdTree = new KDTree();
         GenerateTrees();
+        Triangulate();
     }
 
     private void GenerateTrees()
     {
-        float minDistance = Mathf.Min(rect.width / 2, rect.height / 2);
+        float minDistance = Mathf.Min(bounds.width / 2, bounds.height / 2);
 
         for (int i = 0; i < nTrees; i++)
         {
@@ -64,7 +66,7 @@ public class TreeFactory : MonoBehaviour
                     minDistance /= 2;
                 }
 
-                pos = rect.RandomPoint();
+                pos = bounds.RandomPoint();
 
             } while (NearestTreeDistance(pos) < minDistance);
 
@@ -89,6 +91,12 @@ public class TreeFactory : MonoBehaviour
         Vertex v = kdTree.Nearest(pos);
         return Vector2.Distance(v.position, pos);
     }
+
+    private void Triangulate()
+    {
+        triangulation = new Triangulation(bounds);
+        triangulation.AddVertex(vertices[0]);
+    }
 #endregion Init
 
 #region Public Methods
@@ -101,16 +109,32 @@ public class TreeFactory : MonoBehaviour
 #endregion
 
 #region Gizmos
+
+    [Header("Gizmos")]
+    [SerializeField] private bool drawBoundsGizmo = false;
+    [SerializeField] private bool drawKDTreeGizmo = false;
+    [SerializeField] private bool drawTriangulationGizmo = false;
+
     void OnDrawGizmos()
     {
-        Gizmos.color = Color.green;
-        rect.DrawGizmo(transform);
+        if (drawBoundsGizmo)
+        {
+            Gizmos.color = Color.green;
+            bounds.DrawGizmo(transform);
+        }
 
-        if (kdTree != null)
+        if (drawKDTreeGizmo && kdTree != null)
         {
             Gizmos.color = Color.yellow;
             kdTree.DrawGizmo(transform);
         }
+        
+        if (drawTriangulationGizmo && triangulation != null)
+        {
+            Gizmos.color = Color.cyan;
+            triangulation.DrawGizmo(transform);
+        }
+                
     }
 #endregion Gizmos
 }
