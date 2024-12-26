@@ -9,6 +9,7 @@
 using UnityEngine;
 using WordsOnPlay.Utils;
 using WordsOnPlay.Geometry;
+using System.Collections;
 
 public class TreeFactory : MonoBehaviour
 {
@@ -95,7 +96,22 @@ public class TreeFactory : MonoBehaviour
     private void Triangulate()
     {
         triangulation = new Triangulation(bounds);
-        triangulation.AddVertex(vertices[0]);
+        StartCoroutine(AddVertices());    
+    }
+
+    private IEnumerator AddVertices()
+    {
+        for (int i = 0; i < vertices.Length; i++)
+        {
+            triangulation.AddVertex(vertices[i]);
+            yield return new WaitForSeconds(1);
+        }
+    }
+
+    private void OnApplicationQuit()
+    {
+        triangulation = null;
+        kdTree = null;
     }
 #endregion Init
 
@@ -123,16 +139,19 @@ public class TreeFactory : MonoBehaviour
             bounds.DrawGizmo(transform);
         }
 
-        if (drawKDTreeGizmo && kdTree != null)
+        if (Application.isPlaying) 
         {
-            Gizmos.color = Color.yellow;
-            kdTree.DrawGizmo(transform);
-        }
-        
-        if (drawTriangulationGizmo && triangulation != null)
-        {
-            Gizmos.color = Color.cyan;
-            triangulation.DrawGizmo(transform);
+            if (drawKDTreeGizmo && kdTree != null)
+            {
+                Gizmos.color = Color.yellow;
+                kdTree.DrawGizmo(transform);
+            }
+            
+            if (drawTriangulationGizmo && triangulation != null)
+            {
+                Gizmos.color = Color.cyan;
+                triangulation.DrawGizmo(transform);
+            }
         }
                 
     }

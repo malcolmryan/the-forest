@@ -18,8 +18,8 @@ public class Triangulation
     [Serializable]
     private class Triangle 
     {
-        public Face face;
         public List<Triangle> children;
+        public HalfEdge[] edges;
 
         public Triangle(Vector2 a, Vector2 b, Vector2 c) 
         {
@@ -27,32 +27,43 @@ public class Triangulation
             Vertex vb = new Vertex(b);
             Vertex vc = new Vertex(c);
 
-            HalfEdge eab = new HalfEdge(va);
-            HalfEdge ebc = new HalfEdge(vb);
-            HalfEdge eca = new HalfEdge(vc);
+            this.edges = new HalfEdge[3];
+            va.edge = edges[0] = new HalfEdge(va);
+            vb.edge = edges[1] = new HalfEdge(vb);
+            vc.edge = edges[2] = new HalfEdge(vc);
                         
-            va.edge = eab;
-            vb.edge = ebc;
-            vc.edge = eca;
+            edges[0].next = edges[1];
+            edges[1].next = edges[2];
+            edges[2].next = edges[0];
 
-            eab.next = ebc;
-            ebc.next = eca;
-            eca.next = eab;
-
-            this.face = new Face(eab);
+            Face face = new Face(edges[0]);
+            edges[0].face = face;
+            edges[1].face = face;
+            edges[2].face = face;
 
             this.children = null;
         }
 
-        public Triangle(Face face)
+        public Triangle(HalfEdge e0, HalfEdge e1, HalfEdge e2)
         {
-            this.face = face;
+            this.edges = new HalfEdge[3];
+            edges[0] = e0;
+            edges[1] = e1;
+            edges[2] = e2;
+            
             this.children = null;
         }
 
         public bool Contains(Vector2 p) 
         {
-            return face.Contains(p, strict: false);
+            for (int i = 0; i < 3; i++) 
+            {
+                if (edges[i].Side(p) < 0)
+                {
+                    return false;
+                }
+            }
+            return true;
         }
 
     }
@@ -91,9 +102,9 @@ public class Triangulation
     {
         Triangle t = EnclosingTriangle(p);
         
-        HalfEdge eab = t.face.edge;
-        HalfEdge ebc = eab.next;
-        HalfEdge eca = ebc.next;
+        HalfEdge eab = t.edges[0];
+        HalfEdge ebc = t.edges[1];
+        HalfEdge eca = t.edges[2];
 
         Vertex a = eab.fromVertex;
         Vertex b = ebc.fromVertex;
@@ -118,13 +129,13 @@ public class Triangulation
         HalfEdge ecv = evc.flip;
 
         Face fvab = CreateFace(eab, ebv, eva);
-        Face fvbc = CreateFace(eab, ebv, eva);
-        Face fvca = CreateFace(eab, ebv, eva);
+        Face fvbc = CreateFace(ebc, ecv, evb);
+        Face fvca = CreateFace(eca, eav, evc);
 
         t.children = new List<Triangle>();
-        t.children.Add(new Triangle(fvab));
-        t.children.Add(new Triangle(fvbc));
-        t.children.Add(new Triangle(fvca));
+        t.children.Add(new Triangle(eab, ebv, eva));
+        t.children.Add(new Triangle(ebc, ecv, evb));
+        t.children.Add(new Triangle(eca, eav, evc));
     }
 
     private Face CreateFace(HalfEdge eab, HalfEdge ebc, HalfEdge eca)
@@ -173,7 +184,7 @@ public class Triangulation
     {
         if (triangle.children == null)
         {
-            GeometryGizmos.DrawGizmo(triangle.face, transform: transform);
+            GeometryGizmos.DrawTriangleGizmo(triangle.edges[0], transform: transform);
         }
         else
         {

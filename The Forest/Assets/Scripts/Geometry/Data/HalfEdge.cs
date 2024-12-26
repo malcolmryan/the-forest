@@ -15,7 +15,6 @@ namespace WordsOnPlay.Geometry
 public class HalfEdge 
 {
     public Vertex fromVertex;
-    public HalfEdge prev;
     public HalfEdge next;
     public HalfEdge flip;
     public Face face;
