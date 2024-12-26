@@ -438,7 +438,7 @@ MonoBehaviour:
     y: -50
     width: 100
     height: 100
-  nTrees: 1000
+  nTrees: 10
   treePrefab: {fileID: -9146643041597534257, guid: 1c96c370b7f714f39bbaaf5cefaa5c71, type: 3}
   nFails: 10
   drawBoundsGizmo: 1

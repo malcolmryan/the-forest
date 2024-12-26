@@ -1,0 +1,78 @@
+/**
+ *
+ * Author: Malcolm Ryan
+ * Version: 1.0
+ * For Unity Version: 2022.3
+ */
+
+using UnityEngine;
+using WordsOnPlay.Utils;
+using WordsOnPlay.Geometry;
+using System.Collections.Generic;
+
+public class TriangulationTest : MonoBehaviour
+{
+
+#region Parameters
+    [SerializeField] private Rect bounds;
+#endregion 
+
+#region State
+    private Triangulation triangulation;
+    private List<Vertex> vertices;
+#endregion
+
+#region Init & Destroy
+    void Awake()
+    {
+        vertices = new List<Vertex>();
+        triangulation = new Triangulation(bounds);
+    }
+#endregion 
+
+#region Update
+    void Update()
+    {
+        if (Input.GetMouseButtonDown(0))
+        {
+            Plane plane = new Plane(transform.forward, transform.position);
+
+            Ray ray =  Camera.main.ScreenPointToRay(Input.mousePosition); 
+
+            float t = 0;
+            
+            if (plane.Raycast(ray, out t)) {
+                AddVertex(ray.GetPoint(t));
+            }
+        }
+    }
+
+    private void AddVertex(Vector3 point) 
+    {
+        Vector2 p = transform.InverseTransformPoint(point);
+        triangulation.AddVertex(p);
+
+        StartCoroutine(triangulation.FlipEdges());
+    }
+
+#endregion 
+
+#region Gizmos
+    void OnDrawGizmos()
+    {
+        Gizmos.color = Color.green;
+        bounds.DrawGizmo(transform);
+
+        if (Application.isPlaying) 
+        {
+            if (triangulation != null)
+            {
+                Gizmos.color = Color.cyan;
+                triangulation.DrawGizmo(transform);
+            }
+        }
+                
+    }
+
+#endregion 
+}

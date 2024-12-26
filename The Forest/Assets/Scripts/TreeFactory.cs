@@ -96,15 +96,9 @@ public class TreeFactory : MonoBehaviour
     private void Triangulate()
     {
         triangulation = new Triangulation(bounds);
-        StartCoroutine(AddVertices());    
-    }
-
-    private IEnumerator AddVertices()
-    {
         for (int i = 0; i < vertices.Length; i++)
         {
             triangulation.AddVertex(vertices[i]);
-            yield return new WaitForSeconds(1);
         }
     }
 

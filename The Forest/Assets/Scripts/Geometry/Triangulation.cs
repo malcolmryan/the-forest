@@ -7,6 +7,7 @@
 
 using UnityEngine;
 using System;
+using System.Collections;
 using System.Collections.Generic;
 
 namespace WordsOnPlay.Geometry
@@ -20,8 +21,9 @@ public class Triangulation
     {
         public List<Triangle> children;
         public HalfEdge[] edges;
+        public Face face;
 
-        public Triangle(Vector2 a, Vector2 b, Vector2 c) 
+        public Triangle(Triangulation triangulation, Vector2 a, Vector2 b, Vector2 c) 
         {
             Vertex va = new Vertex(a);
             Vertex vb = new Vertex(b);
@@ -36,21 +38,26 @@ public class Triangulation
             edges[1].next = edges[2];
             edges[2].next = edges[0];
 
-            Face face = new Face(edges[0]);
+            this.face = new Face(edges[0]);
             edges[0].face = face;
             edges[1].face = face;
             edges[2].face = face;
 
+            triangulation.faceToTriangle[face] = this;
+
             this.children = null;
         }
 
-        public Triangle(HalfEdge e0, HalfEdge e1, HalfEdge e2)
+        public Triangle(Triangulation triangulation, HalfEdge e0, HalfEdge e1, HalfEdge e2)
         {
             this.edges = new HalfEdge[3];
             edges[0] = e0;
             edges[1] = e1;
             edges[2] = e2;
             
+            this.face = e0.face;
+            triangulation.faceToTriangle[face] = this;
+
             this.children = null;
         }
 
@@ -68,9 +75,9 @@ public class Triangulation
 
     }
 
-
     private Rect bounds;
     private Triangle root;
+    private Dictionary<Face, Triangle> faceToTriangle;
 
     public Triangulation(Rect bounds)
     {
@@ -95,7 +102,8 @@ public class Triangulation
         Vector2 b = new Vector2(x+w+w/2, y+h);
         Vector2 c = new Vector2(x-w/2, y+h);
 
-        root = new Triangle(a, b, c);
+        faceToTriangle = new Dictionary<Face, Triangle>();
+        root = new Triangle(this, a, b, c);
     }
 
     public void AddVertex(Vector2 p)
@@ -132,10 +140,148 @@ public class Triangulation
         Face fvbc = CreateFace(ebc, ecv, evb);
         Face fvca = CreateFace(eca, eav, evc);
 
+        Triangle ta = new Triangle(this, eab, ebv, eva);
+        Triangle tb = new Triangle(this, ebc, ecv, evb);
+        Triangle tc = new Triangle(this, eca, eav, evc);
+
         t.children = new List<Triangle>();
-        t.children.Add(new Triangle(eab, ebv, eva));
-        t.children.Add(new Triangle(ebc, ecv, evb));
-        t.children.Add(new Triangle(eca, eav, evc));
+        t.children.Add(ta);
+        t.children.Add(tb);
+        t.children.Add(tc);
+
+        queue.Enqueue(eab);
+        queue.Enqueue(ebc);
+        queue.Enqueue(eca);
+
+        // FlipEdges(eab);
+        // FlipEdges(ebc);
+        // FlipEdges(eca);
+    }
+
+    Queue<HalfEdge> queue = new Queue<HalfEdge>();
+
+    public IEnumerator FlipEdges() 
+    {
+        while (queue.Count > 0)
+        {
+            HalfEdge e = queue.Dequeue();
+
+            if (!IsDelaunay(e))
+            {
+                HalfEdge ebd = e;
+                HalfEdge eda = ebd.next;
+                HalfEdge eab = eda.next;
+
+                HalfEdge edb = ebd.flip;
+                HalfEdge ebc = edb.next;
+                HalfEdge ecd = ebc.next;
+
+                //     D                   D
+                //    /|\                 / \
+                //   / | \               /   \
+                //  A  |  C    ===>     A --- C 
+                //   \ | /               \   /
+                //    \|/                 \ /
+                //     B                   B
+
+                Face fbda = ebd.face;
+                Face fdbc = edb.face;
+
+                Vertex va = eab.fromVertex;
+                Vertex vc = ecd.fromVertex;
+
+                HalfEdge eac = HalfEdge.CreateEdgePair(va, vc);
+                HalfEdge eca = eac.flip;
+
+                // Trinagle ABC
+
+                eca.next = eab;
+                eab.next = ebc;
+                ebc.next = eca;
+
+                Face fabc = new Face(eca);
+                eca.face = fabc;
+                eab.face = fabc;
+                ebc.face = fabc;
+
+                Triangle tabc = new Triangle(this, eca, ebc, ebc);
+
+                // Triangle ACD
+
+                eac.next = ecd;
+                ecd.next = eda;
+                eda.next = eac;
+                
+                Face facd = new Face(eac);
+                eac.face = facd;
+                ecd.face = facd;
+                eda.face = facd;
+
+                Triangle tacd = new Triangle(this, eac, ecd, eda);
+
+                // Connect to old triangles
+
+                Triangle tbda = faceToTriangle[fbda];
+                tbda.children = new List<Triangle>();
+                tbda.children.Add(tabc);
+                tbda.children.Add(tacd);
+
+                Triangle tdbc = faceToTriangle[fdbc];
+                tdbc.children = new List<Triangle>();
+                tdbc.children.Add(tabc);
+                tdbc.children.Add(tacd);
+
+                // enqueue the surrounding edges
+                queue.Enqueue(eab);
+                queue.Enqueue(ebc);
+                queue.Enqueue(eda);
+                queue.Enqueue(ecd);
+            }
+
+            yield return new WaitForSeconds(1);
+        }
+    }
+
+
+    private bool IsDelaunay(HalfEdge edge) {
+
+        // ignore exterior edges
+        if (edge.flip == null) 
+        {
+            return true;
+        }
+
+        //     D
+        //    /|\
+        //   / | \
+        //  A  |  C
+        //   \ | /
+        //    \|/
+        //     B
+        // 
+        // e = BD
+        //
+        // satisfies the Delaunay constraint if angle(DAB) + angle(BCD) <= 180°
+        //
+        // https://en.wikipedia.org/wiki/Delaunay_triangulation#Visual_Delaunay_definition:_Flipping
+
+        HalfEdge ebd = edge;
+        HalfEdge eda = ebd.next;
+        HalfEdge eab = eda.next;
+
+        HalfEdge edb = ebd.flip;
+        HalfEdge ebc = edb.next;
+        HalfEdge ecd = ebc.next;
+
+        Vector2 vab = eab.Direction;
+        Vector2 vad = -eda.Direction;
+        float angleA = Vector2.Angle(vab, vad); // unsigned angle in degrees
+
+        Vector2 vcb = -ebc.Direction;
+        Vector2 vcd = ecd.Direction;
+        float angleC = Vector2.Angle(vcb, vcd); // unsigned angle in degrees
+
+        return angleA + angleC <= 180;
     }
 
     private Face CreateFace(HalfEdge eab, HalfEdge ebc, HalfEdge eca)
@@ -175,6 +321,7 @@ public class Triangulation
         return t;
     }
 
+#region Gizmos
     public void DrawGizmo(Transform transform = null)
     {
         DrawGizmo(root, transform);
@@ -184,7 +331,23 @@ public class Triangulation
     {
         if (triangle.children == null)
         {
-            GeometryGizmos.DrawTriangleGizmo(triangle.edges[0], transform: transform);
+            Vector3 a = triangle.edges[0].fromVertex.position;
+            Vector3 b = triangle.edges[1].fromVertex.position;
+            Vector3 c = triangle.edges[2].fromVertex.position;
+
+            if (transform != null) 
+            {
+                a = transform.TransformPoint(a);
+                b = transform.TransformPoint(b);
+                c = transform.TransformPoint(c);
+            }
+
+            Gizmos.color =  (IsDelaunay(triangle.edges[0]) ? Color.green : Color.red);
+            Gizmos.DrawLine(a, b);
+            Gizmos.color =  (IsDelaunay(triangle.edges[1]) ? Color.green : Color.red);
+            Gizmos.DrawLine(b, c);
+            Gizmos.color =  (IsDelaunay(triangle.edges[2]) ? Color.green : Color.red);
+            Gizmos.DrawLine(c, a);
         }
         else
         {
@@ -194,6 +357,8 @@ public class Triangulation
             }
         }
     }
+#endregion
+
 }
 
 }
