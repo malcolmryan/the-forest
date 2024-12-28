@@ -27,6 +27,12 @@ public class TriangulationTest : MonoBehaviour
     {
         vertices = new List<Vertex>();
         triangulation = new Triangulation(bounds);
+
+        for (int i = 0; i < transform.childCount; i++) 
+        {
+            Transform child = transform.GetChild(i);
+            AddVertex(child.position);
+        }
     }
 #endregion 
 
@@ -51,8 +57,7 @@ public class TriangulationTest : MonoBehaviour
     {
         Vector2 p = transform.InverseTransformPoint(point);
         triangulation.AddVertex(p);
-
-        StartCoroutine(triangulation.FlipEdges());
+        triangulation.FlipEdges();
     }
 
 #endregion 
@@ -60,14 +65,13 @@ public class TriangulationTest : MonoBehaviour
 #region Gizmos
     void OnDrawGizmos()
     {
-        Gizmos.color = Color.green;
+        Gizmos.color = Color.cyan;
         bounds.DrawGizmo(transform);
 
         if (Application.isPlaying) 
         {
             if (triangulation != null)
             {
-                Gizmos.color = Color.cyan;
                 triangulation.DrawGizmo(transform);
             }
         }

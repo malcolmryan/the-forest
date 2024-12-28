@@ -44,6 +44,7 @@ public class Triangulation
             edges[2].face = face;
 
             triangulation.faceToTriangle[face] = this;
+            triangulation.nTriangles++;
 
             this.children = null;
         }
@@ -78,6 +79,7 @@ public class Triangulation
     private Rect bounds;
     private Triangle root;
     private Dictionary<Face, Triangle> faceToTriangle;
+    private int nTriangles = 0;
 
     public Triangulation(Rect bounds)
     {
@@ -102,6 +104,7 @@ public class Triangulation
         Vector2 b = new Vector2(x+w+w/2, y+h);
         Vector2 c = new Vector2(x-w/2, y+h);
 
+        nTriangles = 0;
         faceToTriangle = new Dictionary<Face, Triangle>();
         root = new Triangle(this, a, b, c);
     }
@@ -158,11 +161,14 @@ public class Triangulation
         // FlipEdges(eca);
     }
 
-    Queue<HalfEdge> queue = new Queue<HalfEdge>();
+    private Queue<HalfEdge> queue = new Queue<HalfEdge>();
 
-    public IEnumerator FlipEdges() 
+    public void FlipEdges() 
     {
-        while (queue.Count > 0)
+        int iterations = 0;
+        int maxIterations = nTriangles;
+
+        while (queue.Count > 0 && iterations < maxIterations)
         {
             HalfEdge e = queue.Dequeue();
 
@@ -236,9 +242,14 @@ public class Triangulation
                 queue.Enqueue(ebc);
                 queue.Enqueue(eda);
                 queue.Enqueue(ecd);
-            }
 
-            yield return new WaitForSeconds(1);
+                iterations++;
+            }
+        }
+
+        if (queue.Count > 0)
+        {
+            throw new Exception("Exceeded max iterations")  ;
         }
     }
 
