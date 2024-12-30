@@ -85,6 +85,7 @@ public class Triangulation
     private Triangle root;
     private Dictionary<Face, Triangle> faceToTriangle;
     private int nTriangles = 0;
+    private HashSet<Triangle> leaves;
 
     public Triangulation(Rect bounds)
     {
@@ -117,6 +118,8 @@ public class Triangulation
         Vertex vc = new Vertex(c, "R_c");
 
         root = new Triangle(this, va, vb, vc);
+        leaves = new HashSet<Triangle>();
+        leaves.Add(root);
     }
 
     public void AddVertex(Vertex v)
@@ -165,22 +168,24 @@ public class Triangulation
         t.children.Add(tb);
         t.children.Add(tc);
 
-        queue.Enqueue(eab);
-        queue.Enqueue(ebc);
-        queue.Enqueue(eca);
+        leaves.Remove(t);
+        leaves.Add(ta);
+        leaves.Add(tb);
+        leaves.Add(tc);
+
+        flipQueue.Enqueue(eab);
+        flipQueue.Enqueue(ebc);
+        flipQueue.Enqueue(eca);
     }
 
-    private Queue<HalfEdge> queue = new Queue<HalfEdge>();
+    private Queue<HalfEdge> flipQueue = new Queue<HalfEdge>();
 
     public void FlipEdges() 
     {
-        int iterations = 0;
-        int maxIterations = 10000;
-
-        while (queue.Count > 0 && iterations < maxIterations)
+        while (flipQueue.Count > 0)
         {
-            HalfEdge e = queue.Dequeue();
-            Debug.Log($"Processing edge: {e.Name}");
+            HalfEdge e = flipQueue.Dequeue();
+            // Debug.Log($"Processing edge: {e.Name}");
 
             if (IsInterior(e) && !IsDelaunay(e))
             {
@@ -243,19 +248,22 @@ public class Triangulation
                 tbda.children = new List<Triangle>();
                 tbda.children.Add(tabc);
                 tbda.children.Add(tacd);
+                leaves.Remove(tbda);
 
                 Triangle tdbc = faceToTriangle[fdbc];
                 tdbc.children = new List<Triangle>();
                 tdbc.children.Add(tabc);
                 tdbc.children.Add(tacd);
+                leaves.Remove(tdbc);
+
+                leaves.Add(tabc);
+                leaves.Add(tacd);
 
                 // enqueue the surrounding edges
-                queue.Enqueue(eab);
-                queue.Enqueue(ebc);
-                queue.Enqueue(eda);
-                queue.Enqueue(ecd);
-
-                iterations++;
+                flipQueue.Enqueue(eab);
+                flipQueue.Enqueue(ebc);
+                flipQueue.Enqueue(eda);
+                flipQueue.Enqueue(ecd);
             }
         }
 
@@ -349,12 +357,7 @@ public class Triangulation
 #region Gizmos
     public void DrawGizmo(Transform transform = null)
     {
-        DrawGizmo(root, transform);
-    }
-
-    private void DrawGizmo(Triangle triangle, Transform transform = null)
-    {
-        if (triangle.children == null)
+        foreach(Triangle triangle in leaves)
         {
             Vector3 a = triangle.edges[0].fromVertex.position;
             Vector3 b = triangle.edges[1].fromVertex.position;
@@ -373,13 +376,6 @@ public class Triangulation
             Gizmos.DrawLine(b, c);
             Gizmos.color =  (IsDelaunay(triangle.edges[2]) ? Color.green : Color.red);
             Gizmos.DrawLine(c, a);
-        }
-        else
-        {
-            foreach (Triangle child in triangle.children)
-            {
-                DrawGizmo(child);
-            }
         }
     }
 #endregion
