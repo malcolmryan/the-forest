@@ -76,7 +76,7 @@ public class TreeFactory : MonoBehaviour
             TreeShadow tree = Instantiate(
                 treePrefab, transform.position, Quaternion.identity, transform);
             tree.transform.localPosition = pos;
-            vertices[i] = new Vertex(pos);
+            vertices[i] = new Vertex(pos, $"T{i}");
             kdTree.AddVertex(vertices[i]);
         }
 
@@ -99,6 +99,7 @@ public class TreeFactory : MonoBehaviour
         for (int i = 0; i < vertices.Length; i++)
         {
             triangulation.AddVertex(vertices[i]);
+            triangulation.FlipEdges();
         }
     }
 

@@ -31,8 +31,12 @@ public class TriangulationTest : MonoBehaviour
         for (int i = 0; i < transform.childCount; i++) 
         {
             Transform child = transform.GetChild(i);
-            AddVertex(child.position);
+            AddVertex(child.position, child.gameObject.name);
         }
+
+
+
+
     }
 #endregion 
 
@@ -53,10 +57,11 @@ public class TriangulationTest : MonoBehaviour
         }
     }
 
-    private void AddVertex(Vector3 point) 
+    private void AddVertex(Vector3 point, string name = "V") 
     {
         Vector2 p = transform.InverseTransformPoint(point);
-        triangulation.AddVertex(p);
+        Vertex v = new Vertex(p, name);
+        triangulation.AddVertex(v);
         triangulation.FlipEdges();
     }
 

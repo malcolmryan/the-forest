@@ -23,20 +23,25 @@ public class Triangulation
         public HalfEdge[] edges;
         public Face face;
 
-        public Triangle(Triangulation triangulation, Vector2 a, Vector2 b, Vector2 c) 
+        public string Name 
         {
-            Vertex va = new Vertex(a);
-            Vertex vb = new Vertex(b);
-            Vertex vc = new Vertex(c);
+            get { return $"{edges[0].fromVertex.name},{edges[1].fromVertex.name},{edges[2].fromVertex.name}"; }
+        }
 
+        public Triangle(Triangulation triangulation, Vertex va, Vertex vb, Vertex vc) 
+        {
             this.edges = new HalfEdge[3];
-            va.edge = edges[0] = new HalfEdge(va);
-            vb.edge = edges[1] = new HalfEdge(vb);
-            vc.edge = edges[2] = new HalfEdge(vc);
+            va.edge = edges[0] = HalfEdge.CreateEdgePair(va, vb);
+            vb.edge = edges[1] = HalfEdge.CreateEdgePair(vb, vc);
+            vc.edge = edges[2] = HalfEdge.CreateEdgePair(vc, va);
                         
             edges[0].next = edges[1];
             edges[1].next = edges[2];
             edges[2].next = edges[0];
+
+            edges[0].flip.next = edges[2];
+            edges[1].flip.next = edges[0];
+            edges[2].flip.next = edges[1];
 
             this.face = new Face(edges[0]);
             edges[0].face = face;
@@ -106,12 +111,19 @@ public class Triangulation
 
         nTriangles = 0;
         faceToTriangle = new Dictionary<Face, Triangle>();
-        root = new Triangle(this, a, b, c);
+
+        Vertex va = new Vertex(a, "R_a");
+        Vertex vb = new Vertex(b, "R_b");
+        Vertex vc = new Vertex(c, "R_c");
+
+        root = new Triangle(this, va, vb, vc);
     }
 
-    public void AddVertex(Vector2 p)
+    public void AddVertex(Vertex v)
     {
-        Triangle t = EnclosingTriangle(p);
+        Debug.Log($"Adding vertex {v.name}");
+        Triangle t = EnclosingTriangle(v.position);
+        Debug.Log($"Enclosing triangle: {t.Name}");
         
         HalfEdge eab = t.edges[0];
         HalfEdge ebc = t.edges[1];
@@ -129,11 +141,12 @@ public class Triangulation
         //       /_/     \_\
         //      b ----------c
 
-        Vertex v = new Vertex(p);
-
         HalfEdge eva = HalfEdge.CreateEdgePair(v, a);
         HalfEdge evb = HalfEdge.CreateEdgePair(v, b);
         HalfEdge evc = HalfEdge.CreateEdgePair(v, c);
+        Debug.Log($"Adding edge {eva.Name}");
+        Debug.Log($"Adding edge {evb.Name}");
+        Debug.Log($"Adding edge {evc.Name}");
 
         HalfEdge eav = eva.flip;
         HalfEdge ebv = evb.flip;
@@ -155,10 +168,6 @@ public class Triangulation
         queue.Enqueue(eab);
         queue.Enqueue(ebc);
         queue.Enqueue(eca);
-
-        // FlipEdges(eab);
-        // FlipEdges(ebc);
-        // FlipEdges(eca);
     }
 
     private Queue<HalfEdge> queue = new Queue<HalfEdge>();
@@ -166,13 +175,14 @@ public class Triangulation
     public void FlipEdges() 
     {
         int iterations = 0;
-        int maxIterations = nTriangles;
+        int maxIterations = 10000;
 
         while (queue.Count > 0 && iterations < maxIterations)
         {
             HalfEdge e = queue.Dequeue();
+            Debug.Log($"Processing edge: {e.Name}");
 
-            if (!IsDelaunay(e))
+            if (IsInterior(e) && !IsDelaunay(e))
             {
                 HalfEdge ebd = e;
                 HalfEdge eda = ebd.next;
@@ -199,6 +209,8 @@ public class Triangulation
                 HalfEdge eac = HalfEdge.CreateEdgePair(va, vc);
                 HalfEdge eca = eac.flip;
 
+                Debug.Log($"Flipping {e.Name} to {eac.Name}");
+
                 // Trinagle ABC
 
                 eca.next = eab;
@@ -210,7 +222,7 @@ public class Triangulation
                 eab.face = fabc;
                 ebc.face = fabc;
 
-                Triangle tabc = new Triangle(this, eca, ebc, ebc);
+                Triangle tabc = new Triangle(this, eca, eab, ebc);
 
                 // Triangle ACD
 
@@ -247,20 +259,15 @@ public class Triangulation
             }
         }
 
-        if (queue.Count > 0)
-        {
-            throw new Exception("Exceeded max iterations")  ;
-        }
     }
 
+    private bool IsInterior(HalfEdge edge)
+    {
+        return edge.face != null && edge.flip.face != null;
+    }
 
-    private bool IsDelaunay(HalfEdge edge) {
-
-        // ignore exterior edges
-        if (edge.flip == null) 
-        {
-            return true;
-        }
+    private bool IsDelaunay(HalfEdge edge) 
+    {
 
         //     D
         //    /|\
@@ -276,6 +283,9 @@ public class Triangulation
         //
         // https://en.wikipedia.org/wiki/Delaunay_triangulation#Visual_Delaunay_definition:_Flipping
 
+        // Due to floating point rounding errors this result may be >180 for both (angleA + angleC) and (angleB + angleD)
+        // So instead test which is smaller of the two sums.
+
         HalfEdge ebd = edge;
         HalfEdge eda = ebd.next;
         HalfEdge eab = eda.next;
@@ -285,14 +295,18 @@ public class Triangulation
         HalfEdge ecd = ebc.next;
 
         Vector2 vab = eab.Direction;
-        Vector2 vad = -eda.Direction;
-        float angleA = Vector2.Angle(vab, vad); // unsigned angle in degrees
-
-        Vector2 vcb = -ebc.Direction;
+        Vector2 vbc = ebc.Direction;
         Vector2 vcd = ecd.Direction;
-        float angleC = Vector2.Angle(vcb, vcd); // unsigned angle in degrees
+        Vector2 vda = eda.Direction;
 
-        return angleA + angleC <= 180;
+        // unsigned angle in degrees
+        float angleA = Vector2.Angle(-vda, vab); 
+        float angleB = Vector2.Angle(-vab, vbc); 
+        float angleC = Vector2.Angle(-vbc, vcd); 
+        float angleD = Vector2.Angle(-vcd, vda); 
+
+        return (angleA + angleC) <= (angleB + angleD);
+        
     }
 
     private Face CreateFace(HalfEdge eab, HalfEdge ebc, HalfEdge eca)

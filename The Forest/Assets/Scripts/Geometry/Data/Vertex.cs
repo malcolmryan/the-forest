@@ -16,10 +16,12 @@ public class Vertex
 {
     public Vector2 position;
     public HalfEdge edge;
+    public string name;
 
-    public Vertex(Vector2 position)
+    public Vertex(Vector2 position, string name)
     {
         this.position = position;
+        this.name = name;
     }
 
     public static implicit operator Vector2(Vertex v) => v.position;
