@@ -17,6 +17,40 @@ public class Triangle
     public HalfEdge[] edges;
     public Face face;
 
+    public Vector2 Circumcentre
+    {
+        get
+        {
+            // https://en.wikipedia.org/wiki/Circumcircle#Cartesian_coordinates_2
+
+            Vector2 a = edges[0].fromVertex.position;         
+            Vector2 b = edges[1].fromVertex.position;         
+            Vector2 c = edges[2].fromVertex.position;
+            b = b - a;
+            c = c - a;
+
+            Vector2 u = new Vector2();
+            u.x = c.y * b.sqrMagnitude - b.y * c.sqrMagnitude;
+            u.y = b.x * c.sqrMagnitude - c.x * b.sqrMagnitude;
+            float d = 2 * (b.x * c.y - b.y * c.x);
+            u = u / d;
+            u = u + a;
+
+            return u;
+        }        
+    }
+
+    public float Radius
+    {
+        get
+        {
+            Vector2 a = edges[0].fromVertex.position;
+            Vector2 v = Circumcentre - a;
+            return v.magnitude;                   
+        }        
+    }
+
+
     public string Name 
     {
         get { return $"{edges[0].fromVertex.name},{edges[1].fromVertex.name},{edges[2].fromVertex.name}"; }
@@ -67,6 +101,7 @@ public class Triangle
         }
         return true;
     }
+
 
 }
 

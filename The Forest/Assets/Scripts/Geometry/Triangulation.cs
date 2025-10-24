@@ -14,7 +14,7 @@ using System.Collections.Generic;
 namespace WordsOnPlay.Geometry
 {
 
-public partial class Triangulation 
+public partial class Triangulation : IEnumerable<Triangle>
 {
     private Rect bounds;
     private Triangle root;
@@ -24,6 +24,18 @@ public partial class Triangulation
     private Queue<HalfEdge> flipQueue = new Queue<HalfEdge>();
     private bool isRunning = false;
     public bool IsRunning => isRunning;
+
+#region IEnumerable
+    public IEnumerator<Triangle> GetEnumerator()
+    {
+        return leaves.GetEnumerator();        
+    }
+
+    IEnumerator IEnumerable.GetEnumerator()
+    {
+        return GetEnumerator();
+    }
+#endregion
 
     public Triangulation(Rect bounds)
     {
@@ -398,9 +410,25 @@ leaves = newLeaves;
         Gizmos.color = (!IsInterior(e2) || IsDelaunay(e2)) ? Color.green : Color.red;
         Gizmos.DrawLine(c, a);
         
-    } 
+    }
+
+    public void DrawVoronoiGizmo(Transform transform = null)
+    {
+        Gizmos.color = Color.magenta;
+        foreach (Triangle t in leaves)
+        {
+            Vector3 p = t.Circumcentre;
+            if (transform != null)
+            {
+                p = transform.TransformPoint(p);
+            }
+            Gizmos.DrawSphere(p, 0.1f);
+            Gizmos.DrawWireSphere(p, t.Radius);
+        }        
+    }
+
 #endregion
 
-}
+    }
 
 }

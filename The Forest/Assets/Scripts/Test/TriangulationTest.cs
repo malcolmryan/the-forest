@@ -80,6 +80,7 @@ public class TriangulationTest : MonoBehaviour
             if (triangulation != null)
             {
                 triangulation.DrawGizmo(transform);
+                triangulation.DrawVoronoiGizmo(transform);
             }
         }
                 

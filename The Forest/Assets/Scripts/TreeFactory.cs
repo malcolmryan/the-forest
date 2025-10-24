@@ -100,15 +100,15 @@ public class TreeFactory : MonoBehaviour
     {
         triangulation = new Triangulation(bounds);
 
-        Vertex a = new Vertex(bounds.Corner(0), "A");
-        Vertex b = new Vertex(bounds.Corner(1), "B");
-        Vertex c = new Vertex(bounds.Corner(2), "C");
-        Vertex d = new Vertex(bounds.Corner(3), "D");
+        // Vertex a = new Vertex(bounds.Corner(0), "A");
+        // Vertex b = new Vertex(bounds.Corner(1), "B");
+        // Vertex c = new Vertex(bounds.Corner(2), "C");
+        // Vertex d = new Vertex(bounds.Corner(3), "D");
 
-        triangulation.EnqueueVertex(a);
-        triangulation.EnqueueVertex(b);
-        triangulation.EnqueueVertex(c);
-        triangulation.EnqueueVertex(d);
+        // triangulation.EnqueueVertex(a);
+        // triangulation.EnqueueVertex(b);
+        // triangulation.EnqueueVertex(c);
+        // triangulation.EnqueueVertex(d);
 
         for (int i = 0; i < vertices.Length; i++)
         {
@@ -142,6 +142,7 @@ public class TreeFactory : MonoBehaviour
     [SerializeField] private bool drawBoundsGizmo = false;
     [SerializeField] private bool drawKDTreeGizmo = false;
     [SerializeField] private bool drawTriangulationGizmo = false;
+    [SerializeField] private bool drawVoronoi = true;
 
     void OnDrawGizmos()
     {
@@ -163,6 +164,12 @@ public class TreeFactory : MonoBehaviour
             {
                 Gizmos.color = Color.cyan;
                 triangulation.DrawGizmo(transform);
+            }
+
+            if (drawVoronoi && triangulation != null)
+            {
+                Gizmos.color = Color.magenta;
+                triangulation.DrawVoronoiGizmo(transform);                
             }
         }
                 
