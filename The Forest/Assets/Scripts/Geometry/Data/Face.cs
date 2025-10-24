@@ -11,7 +11,6 @@ using System;
 namespace WordsOnPlay.Geometry
 {
 
-[Serializable]
 public class Face 
 {
     public HalfEdge edge;

@@ -13,10 +13,8 @@ using System.Collections.Generic;
 namespace WordsOnPlay.Geometry
 {
 
-[Serializable]
 public class Triangulation 
 {
-    [Serializable]
     private class Triangle 
     {
         public List<Triangle> children;

@@ -11,7 +11,6 @@ using System;
 namespace WordsOnPlay.Geometry
 {
 
-[Serializable]
 public class HalfEdge 
 {
     public Vertex fromVertex;
