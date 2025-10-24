@@ -24,9 +24,11 @@ public class TreeFactory : MonoBehaviour
     [SerializeField] private int nTrees;
     [SerializeField] private TreeShadow treePrefab;
     [SerializeField] private int nFails = 10;
+    [SerializeField] private int rngSeed = 0;
 #endregion 
 
 #region State
+    private System.Random rng;
     private Vertex[] vertices;
     private KDTree kdTree;
     private Triangulation triangulation;
@@ -41,6 +43,7 @@ public class TreeFactory : MonoBehaviour
         }
         instance = this;
 
+        rng = new System.Random(rngSeed);
         vertices = new Vertex[nTrees];
         kdTree = new KDTree();
         GenerateTrees();
@@ -67,7 +70,7 @@ public class TreeFactory : MonoBehaviour
                     minDistance /= 2;
                 }
 
-                pos = bounds.RandomPoint();
+                pos = bounds.RandomPoint(rng);
 
             } while (NearestTreeDistance(pos) < minDistance);
 
@@ -96,11 +99,25 @@ public class TreeFactory : MonoBehaviour
     private void Triangulate()
     {
         triangulation = new Triangulation(bounds);
+
+        Vertex a = new Vertex(bounds.Corner(0), "A");
+        Vertex b = new Vertex(bounds.Corner(1), "B");
+        Vertex c = new Vertex(bounds.Corner(2), "C");
+        Vertex d = new Vertex(bounds.Corner(3), "D");
+
+        triangulation.EnqueueVertex(a);
+        triangulation.EnqueueVertex(b);
+        triangulation.EnqueueVertex(c);
+        triangulation.EnqueueVertex(d);
+
         for (int i = 0; i < vertices.Length; i++)
         {
-            triangulation.AddVertex(vertices[i]);
-            triangulation.FlipEdges();
+            triangulation.EnqueueVertex(vertices[i]);
         }
+
+        StartCoroutine(triangulation.RunCR());
+
+//        triangulation.RemoveRoot();
     }
 
     private void OnApplicationQuit()
@@ -130,7 +147,7 @@ public class TreeFactory : MonoBehaviour
     {
         if (drawBoundsGizmo)
         {
-            Gizmos.color = Color.green;
+            Gizmos.color = Color.magenta;
             bounds.DrawGizmo(transform);
         }
 

@@ -68,7 +68,7 @@ public class PlayerMove : MonoBehaviour
 #region FixedUpdate
     void FixedUpdate()
     {        
-        rigidbody.velocity = speed * movementDir;
+        rigidbody.linearVelocity = speed * movementDir;
 
         if (movementDir.sqrMagnitude > 0) {
             float d = Vector2.SignedAngle(transform.up, movementDir);
@@ -92,12 +92,6 @@ public class PlayerMove : MonoBehaviour
             // Don't run in the editor
             return;
         }
-
-        Vector2 pos = transform.position;
-        Vector2 tree = TreeFactory.Instance.NearestTree(pos);
-
-        Gizmos.color = Color.red;
-        Gizmos.DrawLine(pos, tree);
     }
 #endregion Gizmos
 }

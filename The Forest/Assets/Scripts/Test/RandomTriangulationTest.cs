@@ -11,14 +11,17 @@ using WordsOnPlay.Geometry;
 using System.Collections;
 using System.Collections.Generic;
 
-public class TriangulationTest : MonoBehaviour
+public class RandomTriangulationTest : MonoBehaviour
 {
 
 #region Parameters
     [SerializeField] private Rect bounds;
+    [SerializeField] private int rngSeed;
+    [SerializeField] private int nPoints;
 #endregion 
 
 #region State
+    private System.Random rng;
     private Triangulation triangulation;
     private Queue<Vertex> vertexQueue;
     private IEnumerator coroutine;
@@ -27,37 +30,22 @@ public class TriangulationTest : MonoBehaviour
 #region Init & Destroy
     void Awake()
     {
+        rng = new System.Random(rngSeed);
         triangulation = new Triangulation(bounds);
 
-        for (int i = 0; i < transform.childCount; i++) 
+        for (int i = 0; i < nPoints; i++)
         {
-            Transform child = transform.GetChild(i);
-            AddVertex(child.position, child.gameObject.name);
-        }
-    }
-#endregion 
+            Vector2 p = new Vector3();
+            p.x = bounds.xMin + (float)rng.NextDouble() * bounds.width;
+            p.y = bounds.yMin + (float)rng.NextDouble() * bounds.height;
 
-#region Update
-    void Update()
-    {
-        if (Input.GetMouseButtonDown(0))
-        {
-            Plane plane = new Plane(transform.forward, transform.position);
-
-            Ray ray =  Camera.main.ScreenPointToRay(Input.mousePosition); 
-
-            float t = 0;
-            
-            if (plane.Raycast(ray, out t)) {
-                AddVertex(ray.GetPoint(t));
-            }
+            AddVertex(p, $"V_{i}");
         }
     }
 
-    private void AddVertex(Vector3 point, string name = "V") 
+    private void AddVertex(Vector2 point, string name = "V") 
     {
-        Vector2 p = transform.InverseTransformPoint(point);
-        Vertex v = new Vertex(p, name);
+        Vertex v = new Vertex(point, name);
 
         triangulation.EnqueueVertex(v);
 

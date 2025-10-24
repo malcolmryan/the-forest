@@ -131,6 +131,11 @@ public class KDTree
 
     private KDNode MakeTree(Vertex[] vertices, int start, int len, int axis, KDNode parent = null) 
     {
+        if (vertices.Length == 0)
+        {
+            return null;
+        }
+
         Array.Sort(vertices, start, len, comparers[axis]);
 
         int mid = start + len / 2;
@@ -227,7 +232,15 @@ public class KDTree
         KDNode nearest = null;
         float distance = float.PositiveInfinity;
         Nearest(root, v, ref nearest, ref distance);
-        return nearest.vertex;
+
+        if (nearest == null)
+        {
+            return null;
+        }
+        else 
+        {
+            return nearest.vertex;
+        }
     }
 
     private void Nearest(KDNode node, Vector2 v, ref KDNode nearest, ref float dNearest)

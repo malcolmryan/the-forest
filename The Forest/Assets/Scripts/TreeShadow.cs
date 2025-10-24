@@ -44,7 +44,7 @@ public class TreeShadow : MonoBehaviour
     void Awake()
     {
         shadowCaster = GetComponent<ShadowCaster2D>();
-        MakeShadowCasterShape();
+        //MakeShadowCasterShape();
     }
 
     private void MakeShadowCasterShape()

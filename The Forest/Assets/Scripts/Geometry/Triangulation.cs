@@ -86,6 +86,10 @@ public class Triangulation
     private Dictionary<Face, Triangle> faceToTriangle;
     private int nTriangles = 0;
     private HashSet<Triangle> leaves;
+    private Queue<Vertex> vertexQueue = new Queue<Vertex>();
+    private Queue<HalfEdge> flipQueue = new Queue<HalfEdge>();
+    private bool isRunning = false;
+    public bool IsRunning => isRunning;
 
     public Triangulation(Rect bounds)
     {
@@ -118,15 +122,41 @@ public class Triangulation
         Vertex vc = new Vertex(c, "R_c");
 
         root = new Triangle(this, va, vb, vc);
-        leaves = new HashSet<Triangle>();
-        leaves.Add(root);
+        leaves = new HashSet<Triangle> { root };
     }
 
-    public void AddVertex(Vertex v)
+    public void EnqueueVertex(Vertex v)
     {
-        Debug.Log($"Adding vertex {v.name}");
+        vertexQueue.Enqueue(v);
+    }
+
+    public IEnumerator RunCR()
+    {
+        isRunning = true;
+        while (vertexQueue.Count > 0)
+        {
+            Vertex v = vertexQueue.Dequeue();
+            AddVertex(v);
+            yield return FlipEdgesCR();
+        }
+        isRunning = false;
+    }
+
+    public void Run()
+    {
+        while (vertexQueue.Count > 0)
+        {
+            Vertex v = vertexQueue.Dequeue();
+            AddVertex(v);
+            FlipEdges();
+        }
+    }
+
+    private void AddVertex(Vertex v)
+    {
+        Debug.Log($"[Triangulation.AddVertex] Adding vertex {v.name}");
         Triangle t = EnclosingTriangle(v.position);
-        Debug.Log($"Enclosing triangle: {t.Name}");
+        Debug.Log($"[Triangulation.AddVertex] Enclosing triangle: {t.Name}");
         
         HalfEdge eab = t.edges[0];
         HalfEdge ebc = t.edges[1];
@@ -147,9 +177,9 @@ public class Triangulation
         HalfEdge eva = HalfEdge.CreateEdgePair(v, a);
         HalfEdge evb = HalfEdge.CreateEdgePair(v, b);
         HalfEdge evc = HalfEdge.CreateEdgePair(v, c);
-        Debug.Log($"Adding edge {eva.Name}");
-        Debug.Log($"Adding edge {evb.Name}");
-        Debug.Log($"Adding edge {evc.Name}");
+        Debug.Log($"[Triangulation.AddVertex] Adding edge {eva.Name}");
+        Debug.Log($"[Triangulation.AddVertex] Adding edge {evb.Name}");
+        Debug.Log($"[Triangulation.AddVertex] Adding edge {evc.Name}");
 
         HalfEdge eav = eva.flip;
         HalfEdge ebv = evb.flip;
@@ -163,10 +193,7 @@ public class Triangulation
         Triangle tb = new Triangle(this, ebc, ecv, evb);
         Triangle tc = new Triangle(this, eca, eav, evc);
 
-        t.children = new List<Triangle>();
-        t.children.Add(ta);
-        t.children.Add(tb);
-        t.children.Add(tc);
+        t.children = new List<Triangle> { ta, tb, tc };
 
         leaves.Remove(t);
         leaves.Add(ta);
@@ -178,96 +205,125 @@ public class Triangulation
         flipQueue.Enqueue(eca);
     }
 
-    private Queue<HalfEdge> flipQueue = new Queue<HalfEdge>();
+    private IEnumerator FlipEdgesCR() 
+    {
+        while (flipQueue.Count > 0)
+        {
+            yield return null;
 
-    public void FlipEdges() 
+            HalfEdge e = flipQueue.Dequeue();
+
+            if (IsInterior(e) && !IsDelaunay(e))
+            {
+                FlipEdge(e);
+            }
+        }
+    }
+
+    private void FlipEdges() 
     {
         while (flipQueue.Count > 0)
         {
             HalfEdge e = flipQueue.Dequeue();
-            // Debug.Log($"Processing edge: {e.Name}");
 
             if (IsInterior(e) && !IsDelaunay(e))
             {
-                HalfEdge ebd = e;
-                HalfEdge eda = ebd.next;
-                HalfEdge eab = eda.next;
-
-                HalfEdge edb = ebd.flip;
-                HalfEdge ebc = edb.next;
-                HalfEdge ecd = ebc.next;
-
-                //     D                   D
-                //    /|\                 / \
-                //   / | \               /   \
-                //  A  |  C    ===>     A --- C 
-                //   \ | /               \   /
-                //    \|/                 \ /
-                //     B                   B
-
-                Face fbda = ebd.face;
-                Face fdbc = edb.face;
-
-                Vertex va = eab.fromVertex;
-                Vertex vc = ecd.fromVertex;
-
-                HalfEdge eac = HalfEdge.CreateEdgePair(va, vc);
-                HalfEdge eca = eac.flip;
-
-                Debug.Log($"Flipping {e.Name} to {eac.Name}");
-
-                // Trinagle ABC
-
-                eca.next = eab;
-                eab.next = ebc;
-                ebc.next = eca;
-
-                Face fabc = new Face(eca);
-                eca.face = fabc;
-                eab.face = fabc;
-                ebc.face = fabc;
-
-                Triangle tabc = new Triangle(this, eca, eab, ebc);
-
-                // Triangle ACD
-
-                eac.next = ecd;
-                ecd.next = eda;
-                eda.next = eac;
-                
-                Face facd = new Face(eac);
-                eac.face = facd;
-                ecd.face = facd;
-                eda.face = facd;
-
-                Triangle tacd = new Triangle(this, eac, ecd, eda);
-
-                // Connect to old triangles
-
-                Triangle tbda = faceToTriangle[fbda];
-                tbda.children = new List<Triangle>();
-                tbda.children.Add(tabc);
-                tbda.children.Add(tacd);
-                leaves.Remove(tbda);
-
-                Triangle tdbc = faceToTriangle[fdbc];
-                tdbc.children = new List<Triangle>();
-                tdbc.children.Add(tabc);
-                tdbc.children.Add(tacd);
-                leaves.Remove(tdbc);
-
-                leaves.Add(tabc);
-                leaves.Add(tacd);
-
-                // enqueue the surrounding edges
-                flipQueue.Enqueue(eab);
-                flipQueue.Enqueue(ebc);
-                flipQueue.Enqueue(eda);
-                flipQueue.Enqueue(ecd);
+                FlipEdge(e);
             }
         }
-
     }
+
+    private void FlipEdge(HalfEdge e)
+    {
+        HalfEdge ebd = e;
+        HalfEdge eda = ebd.next;
+        HalfEdge eab = eda.next;
+
+        HalfEdge edb = ebd.flip;
+        HalfEdge ebc = edb.next;
+        HalfEdge ecd = ebc.next;
+
+        //     D                   D
+        //    /|\                 / \
+        //   / | \               /   \
+        //  A  |  C    ===>     A --- C 
+        //   \ | /               \   /
+        //    \|/                 \ /
+        //     B                   B
+
+        Face fbda = ebd.face;
+        Face fdbc = edb.face;
+
+        Vertex va = eab.fromVertex;
+        Vertex vc = ecd.fromVertex;
+
+        HalfEdge eac = HalfEdge.CreateEdgePair(va, vc);
+        HalfEdge eca = eac.flip;
+
+        Debug.Log($"[Triangulation.FlipEdge] Flipping {e.Name} to {eac.Name}");
+
+        Triangle tabc = MakeTriangle(eab, ebc, eca);
+        Triangle tacd = MakeTriangle(eac, ecd, eda);
+        leaves.Add(tacd);
+        leaves.Add(tabc);
+
+        // Connect to old triangles
+
+        Triangle tbda = faceToTriangle[fbda];
+        tbda.children = new List<Triangle> { tabc, tacd };
+        leaves.Remove(tbda);
+
+        Triangle tdbc = faceToTriangle[fdbc];
+        tdbc.children = new List<Triangle> { tabc, tacd };
+        leaves.Remove(tdbc);
+
+        // enqueue the surrounding edges
+        flipQueue.Enqueue(eab);
+        flipQueue.Enqueue(ebc);
+        flipQueue.Enqueue(eda);
+        flipQueue.Enqueue(ecd);
+    }
+
+    private Triangle MakeTriangle(HalfEdge eab, HalfEdge ebc, HalfEdge eca)
+    {
+        eca.next = eab;
+        eab.next = ebc;
+        ebc.next = eca;
+
+        Face fabc = new Face(eca);
+        eca.face = fabc;
+        eab.face = fabc;
+        ebc.face = fabc;
+
+        Triangle tabc = new Triangle(this, eca, eab, ebc);
+        return tabc;
+    }
+
+    public void RemoveRoot() 
+{
+HashSet<Triangle> newLeaves = new HashSet<Triangle>();
+
+HashSet<Vertex> rootVertices = new HashSet<Vertex>();
+rootVertices.Add(root.edges[0].fromVertex);
+rootVertices.Add(root.edges[1].fromVertex);
+rootVertices.Add(root.edges[2].fromVertex);
+
+foreach (Triangle t in leaves)
+{
+    if (rootVertices.Contains(t.edges[0].fromVertex)
+    || rootVertices.Contains(t.edges[1].fromVertex) 
+    || rootVertices.Contains(t.edges[2].fromVertex))
+    {
+        continue;
+    }
+    else 
+    {
+        newLeaves.Add(t);
+    }
+}
+
+leaves = newLeaves;
+}
 
     private bool IsInterior(HalfEdge edge)
     {
@@ -359,25 +415,46 @@ public class Triangulation
     {
         foreach(Triangle triangle in leaves)
         {
-            Vector3 a = triangle.edges[0].fromVertex.position;
-            Vector3 b = triangle.edges[1].fromVertex.position;
-            Vector3 c = triangle.edges[2].fromVertex.position;
-
-            if (transform != null) 
-            {
-                a = transform.TransformPoint(a);
-                b = transform.TransformPoint(b);
-                c = transform.TransformPoint(c);
-            }
-
-            Gizmos.color =  (IsDelaunay(triangle.edges[0]) ? Color.green : Color.red);
-            Gizmos.DrawLine(a, b);
-            Gizmos.color =  (IsDelaunay(triangle.edges[1]) ? Color.green : Color.red);
-            Gizmos.DrawLine(b, c);
-            Gizmos.color =  (IsDelaunay(triangle.edges[2]) ? Color.green : Color.red);
-            Gizmos.DrawLine(c, a);
+            DrawTriangleGizmo(triangle);
         }
     }
+
+    private void DrawTriangleGizmo(Triangle triangle, Transform transform = null)
+    {
+        HalfEdge e0 = triangle.edges[0];
+        HalfEdge e1 = triangle.edges[1];
+        HalfEdge e2 = triangle.edges[2];
+
+        Vector3 a = e0.fromVertex.position;
+        Vector3 b = e1.fromVertex.position;
+        Vector3 c = e2.fromVertex.position;
+
+        if (transform != null) 
+        {
+            a = transform.TransformPoint(a);
+            b = transform.TransformPoint(b);
+            c = transform.TransformPoint(c);
+        }
+
+        Gizmos.color = Color.white;
+        Gizmos.DrawWireSphere(a, 0.1f);
+        Gizmos.DrawWireSphere(b, 0.1f);
+        Gizmos.DrawWireSphere(c, 0.1f);
+
+        // shrink the triangle a little to make it visible
+        Vector3 p = (a+b+c) / 3;
+        a = p + (a-p) * 0.95f;
+        b = p + (b-p) * 0.95f;
+        c = p + (c-p) * 0.95f;
+
+        Gizmos.color = (!IsInterior(e0) || IsDelaunay(e0)) ? Color.green : Color.red;
+        Gizmos.DrawLine(a, b);
+        Gizmos.color = (!IsInterior(e1) || IsDelaunay(e1)) ? Color.green : Color.red;
+        Gizmos.DrawLine(b, c);
+        Gizmos.color = (!IsInterior(e2) || IsDelaunay(e2)) ? Color.green : Color.red;
+        Gizmos.DrawLine(c, a);
+        
+    } 
 #endregion
 
 }
