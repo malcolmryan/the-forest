@@ -6,6 +6,7 @@
  */
 
 using UnityEngine;
+using UnityEditor;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -13,76 +14,11 @@ using System.Collections.Generic;
 namespace WordsOnPlay.Geometry
 {
 
-public class Triangulation 
+public partial class Triangulation 
 {
-    private class Triangle 
-    {
-        public List<Triangle> children;
-        public HalfEdge[] edges;
-        public Face face;
-
-        public string Name 
-        {
-            get { return $"{edges[0].fromVertex.name},{edges[1].fromVertex.name},{edges[2].fromVertex.name}"; }
-        }
-
-        public Triangle(Triangulation triangulation, Vertex va, Vertex vb, Vertex vc) 
-        {
-            this.edges = new HalfEdge[3];
-            va.edge = edges[0] = HalfEdge.CreateEdgePair(va, vb);
-            vb.edge = edges[1] = HalfEdge.CreateEdgePair(vb, vc);
-            vc.edge = edges[2] = HalfEdge.CreateEdgePair(vc, va);
-                        
-            edges[0].next = edges[1];
-            edges[1].next = edges[2];
-            edges[2].next = edges[0];
-
-            edges[0].flip.next = edges[2];
-            edges[1].flip.next = edges[0];
-            edges[2].flip.next = edges[1];
-
-            this.face = new Face(edges[0]);
-            edges[0].face = face;
-            edges[1].face = face;
-            edges[2].face = face;
-
-            triangulation.faceToTriangle[face] = this;
-            triangulation.nTriangles++;
-
-            this.children = null;
-        }
-
-        public Triangle(Triangulation triangulation, HalfEdge e0, HalfEdge e1, HalfEdge e2)
-        {
-            this.edges = new HalfEdge[3];
-            edges[0] = e0;
-            edges[1] = e1;
-            edges[2] = e2;
-            
-            this.face = e0.face;
-            triangulation.faceToTriangle[face] = this;
-
-            this.children = null;
-        }
-
-        public bool Contains(Vector2 p) 
-        {
-            for (int i = 0; i < 3; i++) 
-            {
-                if (edges[i].Side(p) < 0)
-                {
-                    return false;
-                }
-            }
-            return true;
-        }
-
-    }
-
     private Rect bounds;
     private Triangle root;
     private Dictionary<Face, Triangle> faceToTriangle;
-    private int nTriangles = 0;
     private HashSet<Triangle> leaves;
     private Queue<Vertex> vertexQueue = new Queue<Vertex>();
     private Queue<HalfEdge> flipQueue = new Queue<HalfEdge>();
@@ -112,14 +48,15 @@ public class Triangulation
         Vector2 b = new Vector2(x+w+w/2, y+h);
         Vector2 c = new Vector2(x-w/2, y+h);
 
-        nTriangles = 0;
         faceToTriangle = new Dictionary<Face, Triangle>();
 
         Vertex va = new Vertex(a, "R_a");
         Vertex vb = new Vertex(b, "R_b");
         Vertex vc = new Vertex(c, "R_c");
 
-        root = new Triangle(this, va, vb, vc);
+        root = new Triangle(va, vb, vc);
+        faceToTriangle[root.face] = root;
+
         leaves = new HashSet<Triangle> { root };
     }
 
@@ -187,16 +124,21 @@ public class Triangulation
         Face fvbc = CreateFace(ebc, ecv, evb);
         Face fvca = CreateFace(eca, eav, evc);
 
-        Triangle ta = new Triangle(this, eab, ebv, eva);
-        Triangle tb = new Triangle(this, ebc, ecv, evb);
-        Triangle tc = new Triangle(this, eca, eav, evc);
+        Triangle tvab = new Triangle(eva, eab, ebv);
+        faceToTriangle[fvab] = tvab;
 
-        t.children = new List<Triangle> { ta, tb, tc };
+        Triangle tvbc = new Triangle(evb, ebc, ecv);
+        faceToTriangle[fvbc] = tvbc;
+
+        Triangle tvca = new Triangle(evc, eca, eav);
+        faceToTriangle[fvca] = tvca;
+
+        t.children = new List<Triangle> { tvab, tvbc, tvca };
 
         leaves.Remove(t);
-        leaves.Add(ta);
-        leaves.Add(tb);
-        leaves.Add(tc);
+        leaves.Add(tvab);
+        leaves.Add(tvbc);
+        leaves.Add(tvca);
 
         flipQueue.Enqueue(eab);
         flipQueue.Enqueue(ebc);
@@ -293,7 +235,9 @@ public class Triangulation
         eab.face = fabc;
         ebc.face = fabc;
 
-        Triangle tabc = new Triangle(this, eca, eab, ebc);
+        Triangle tabc = new Triangle(eca, eab, ebc);
+        faceToTriangle[fabc] = tabc;
+        
         return tabc;
     }
 
@@ -345,8 +289,6 @@ leaves = newLeaves;
         //
         // https://en.wikipedia.org/wiki/Delaunay_triangulation#Visual_Delaunay_definition:_Flipping
 
-        // Due to floating point rounding errors this result may be >180 for both (angleA + angleC) and (angleB + angleD)
-        // So instead test which is smaller of the two sums.
 
         HalfEdge ebd = edge;
         HalfEdge eda = ebd.next;
@@ -367,8 +309,9 @@ leaves = newLeaves;
         float angleC = Vector2.Angle(-vbc, vcd); 
         float angleD = Vector2.Angle(-vcd, vda); 
 
-        return (angleA + angleC) <= (angleB + angleD);
-        
+        // Due to floating point rounding errors this result may be >180 for both (angleA + angleC) and (angleB + angleD)
+        // So accept this if the other option is also bad        
+        return (angleA + angleC) <= 180 || (angleB + angleD) > 180;
     }
 
     private Face CreateFace(HalfEdge eab, HalfEdge ebc, HalfEdge eca)
@@ -435,9 +378,12 @@ leaves = newLeaves;
         }
 
         Gizmos.color = Color.white;
-        Gizmos.DrawWireSphere(a, 0.1f);
-        Gizmos.DrawWireSphere(b, 0.1f);
-        Gizmos.DrawWireSphere(c, 0.1f);
+        // Gizmos.DrawWireSphere(a, 0.1f);
+        // Gizmos.DrawWireSphere(b, 0.1f);
+        // Gizmos.DrawWireSphere(c, 0.1f);
+        Handles.Label(a, e0.fromVertex.name);
+        Handles.Label(b, e1.fromVertex.name);
+        Handles.Label(c, e2.fromVertex.name);
 
         // shrink the triangle a little to make it visible
         Vector3 p = (a+b+c) / 3;
