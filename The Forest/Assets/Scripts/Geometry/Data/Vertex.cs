@@ -17,9 +17,6 @@ public class Vertex
     public HalfEdge edge;
     public string name;
 
-    public float x => position.x;
-    public float y => position.y;
-
     public Vertex(Vector2 position, string name)
     {
         this.position = position;

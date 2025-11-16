@@ -320,10 +320,10 @@ public partial class Triangulation : IEnumerable<Triangle>
         HalfEdge ebc = edb.next;
         HalfEdge ecd = ebc.next;
 
-        Vertex a = eab.fromVertex;
-        Vertex b = ebd.fromVertex;
-        Vertex c = ecd.fromVertex;
-        Vertex d = eda.fromVertex;
+        Vector2 a = eab.fromVertex;
+        Vector2 b = ebd.fromVertex;
+        Vector2 c = ecd.fromVertex;
+        Vector2 d = eda.fromVertex;
 
         Matrix4x4 m = new Matrix4x4();
         m[0,0] = a.x; m[0,1] = a.y; m[0,2] = a.x * a.x + a.y * a.y; m[0,3] = 1;
@@ -331,7 +331,7 @@ public partial class Triangulation : IEnumerable<Triangle>
         m[2,0] = c.x; m[2,1] = c.y; m[2,2] = c.x * c.x + c.y * c.y; m[2,3] = 1;
         m[3,0] = d.x; m[3,1] = d.y; m[3,2] = d.x * d.x + d.y * d.y; m[3,3] = 1;
 
-        return m.determinant <= 0;
+        return m.determinant <= 0; // D is outside C(ABC), so flip
     }
 
     private Face CreateFace(HalfEdge eab, HalfEdge ebc, HalfEdge eca)
