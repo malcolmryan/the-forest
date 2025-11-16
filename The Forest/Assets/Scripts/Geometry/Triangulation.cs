@@ -20,6 +20,7 @@ public partial class Triangulation : IEnumerable<Triangle>
     private Triangle root;
     private Dictionary<Face, Triangle> faceToTriangle;
     private HashSet<Triangle> leaves;
+    private HashSet<Vertex> vertices;
     private Queue<Vertex> vertexQueue = new Queue<Vertex>();
     private Queue<HalfEdge> flipQueue = new Queue<HalfEdge>();
     private bool isRunning = false;
@@ -70,6 +71,7 @@ public partial class Triangulation : IEnumerable<Triangle>
         faceToTriangle[root.face] = root;
 
         leaves = new HashSet<Triangle> { root };
+        vertices = new HashSet<Vertex>{ va, vb, vc };
     }
 
     public void EnqueueVertex(Vertex v)
@@ -102,8 +104,8 @@ public partial class Triangulation : IEnumerable<Triangle>
     private void AddVertex(Vertex v)
     {
         Debug.Log($"[Triangulation.AddVertex] Adding vertex {v.name}");
+        vertices.Add(v);
         Triangle t = EnclosingTriangle(v.position);
-        Debug.Log($"[Triangulation.AddVertex] Enclosing triangle: {t.Name}");
         
         HalfEdge eab = t.edges[0];
         HalfEdge ebc = t.edges[1];
@@ -254,30 +256,30 @@ public partial class Triangulation : IEnumerable<Triangle>
     }
 
     public void RemoveRoot() 
-{
-HashSet<Triangle> newLeaves = new HashSet<Triangle>();
-
-HashSet<Vertex> rootVertices = new HashSet<Vertex>();
-rootVertices.Add(root.edges[0].fromVertex);
-rootVertices.Add(root.edges[1].fromVertex);
-rootVertices.Add(root.edges[2].fromVertex);
-
-foreach (Triangle t in leaves)
-{
-    if (rootVertices.Contains(t.edges[0].fromVertex)
-    || rootVertices.Contains(t.edges[1].fromVertex) 
-    || rootVertices.Contains(t.edges[2].fromVertex))
     {
-        continue;
-    }
-    else 
-    {
-        newLeaves.Add(t);
-    }
-}
+        HashSet<Triangle> newLeaves = new HashSet<Triangle>();
 
-leaves = newLeaves;
-}
+        HashSet<Vertex> rootVertices = new HashSet<Vertex>();
+        rootVertices.Add(root.edges[0].fromVertex);
+        rootVertices.Add(root.edges[1].fromVertex);
+        rootVertices.Add(root.edges[2].fromVertex);
+
+        foreach (Triangle t in leaves)
+        {
+            if (rootVertices.Contains(t.edges[0].fromVertex)
+            || rootVertices.Contains(t.edges[1].fromVertex) 
+            || rootVertices.Contains(t.edges[2].fromVertex))
+            {
+                continue;
+            }
+            else 
+            {
+                newLeaves.Add(t);
+            }
+        }
+
+        leaves = newLeaves;
+    }
 
     private bool IsInterior(HalfEdge edge)
     {
@@ -298,9 +300,17 @@ leaves = newLeaves;
         // e = BD
         //
         // satisfies the Delaunay constraint if angle(DAB) + angle(BCD) <= 180°
+        // however testing involves trig and causes rounding errors.
+        //
+        // alternatively, we can test whether D lies within the circumcircle of ABC by 
+        // evaluating the determinant of:
+        //
+        // | Ax  Ay  Ax^2 + Ay^2 1 |  
+        // | Bx  By  Bx^2 + By^2 1 | 
+        // | Cx  Cy  Cx^2 + Cy^2 1 |
+        // | Dx  Dy  Dx^2 + Dy^2 1 |
         //
         // https://en.wikipedia.org/wiki/Delaunay_triangulation#Visual_Delaunay_definition:_Flipping
-
 
         HalfEdge ebd = edge;
         HalfEdge eda = ebd.next;
@@ -310,20 +320,18 @@ leaves = newLeaves;
         HalfEdge ebc = edb.next;
         HalfEdge ecd = ebc.next;
 
-        Vector2 vab = eab.Direction;
-        Vector2 vbc = ebc.Direction;
-        Vector2 vcd = ecd.Direction;
-        Vector2 vda = eda.Direction;
+        Vertex a = eab.fromVertex;
+        Vertex b = ebd.fromVertex;
+        Vertex c = ecd.fromVertex;
+        Vertex d = eda.fromVertex;
 
-        // unsigned angle in degrees
-        float angleA = Vector2.Angle(-vda, vab); 
-        float angleB = Vector2.Angle(-vab, vbc); 
-        float angleC = Vector2.Angle(-vbc, vcd); 
-        float angleD = Vector2.Angle(-vcd, vda); 
+        Matrix4x4 m = new Matrix4x4();
+        m[0,0] = a.x; m[0,1] = a.y; m[0,2] = a.x * a.x + a.y * a.y; m[0,3] = 1;
+        m[1,0] = b.x; m[1,1] = b.y; m[1,2] = b.x * b.x + b.y * b.y; m[1,3] = 1;
+        m[2,0] = c.x; m[2,1] = c.y; m[2,2] = c.x * c.x + c.y * c.y; m[2,3] = 1;
+        m[3,0] = d.x; m[3,1] = d.y; m[3,2] = d.x * d.x + d.y * d.y; m[3,3] = 1;
 
-        // Due to floating point rounding errors this result may be >180 for both (angleA + angleC) and (angleB + angleD)
-        // So accept this if the other option is also bad        
-        return (angleA + angleC) <= 180 || (angleB + angleD) > 180;
+        return m.determinant <= 0;
     }
 
     private Face CreateFace(HalfEdge eab, HalfEdge ebc, HalfEdge eca)
@@ -362,6 +370,7 @@ leaves = newLeaves;
 
         return t;
     }
+
 
 #region Gizmos
     public void DrawGizmo(Transform transform = null)
@@ -429,6 +438,6 @@ leaves = newLeaves;
 
 #endregion
 
-    }
+}
 
 }
