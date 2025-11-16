@@ -16,6 +16,7 @@ public class Triangle
     public List<Triangle> children;
     public HalfEdge[] edges;
     public Face face;
+    public string Name => $"T[{edges[0].fromVertex.name},{edges[1].fromVertex.name},{edges[2].fromVertex.name}]";
 
     public Vector2 Circumcentre
     {
@@ -48,12 +49,6 @@ public class Triangle
             Vector2 v = Circumcentre - a;
             return v.magnitude;                   
         }        
-    }
-
-
-    public string Name 
-    {
-        get { return $"{edges[0].fromVertex.name},{edges[1].fromVertex.name},{edges[2].fromVertex.name}"; }
     }
 
     public Triangle(Vertex va, Vertex vb, Vertex vc) 
