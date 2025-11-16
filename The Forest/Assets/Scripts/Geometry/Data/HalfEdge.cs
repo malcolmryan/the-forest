@@ -18,13 +18,8 @@ public class HalfEdge
     public HalfEdge flip;
     public Face face;
 
-    public string Name {
-        get { return $"{fromVertex.name},{flip.fromVertex.name}"; }
-    }
-
-    public Vector2 Direction {
-        get { return next.fromVertex - fromVertex; }
-    }
+    public string Name => $"{fromVertex.name},{flip.fromVertex.name}";
+    public Vector2 Direction => next.fromVertex - fromVertex;
     
     private HalfEdge(Vertex fromVertex)
     {
