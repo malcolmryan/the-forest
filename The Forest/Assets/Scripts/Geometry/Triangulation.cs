@@ -26,7 +26,7 @@ public partial class Triangulation : IEnumerable<Triangle>
     private bool isRunning = false;
     public bool IsRunning => isRunning;
 
-#region IEnumerable
+#region IEnumerables
     public IEnumerator<Triangle> GetEnumerator()
     {
         return leaves.GetEnumerator();        
@@ -36,6 +36,17 @@ public partial class Triangulation : IEnumerable<Triangle>
     {
         return GetEnumerator();
     }
+
+    public IEnumerator<Triangle> GetTriangleEnumerator()
+    {
+        return leaves.GetEnumerator();        
+    }
+
+    public IEnumerator<Vertex> GetVertexEnumerator()
+    {
+        return vertices.GetEnumerator();        
+    }
+
 #endregion
 
     public Triangulation(Rect bounds)
@@ -157,6 +168,8 @@ public partial class Triangulation : IEnumerable<Triangle>
         flipQueue.Enqueue(eab);
         flipQueue.Enqueue(ebc);
         flipQueue.Enqueue(eca);
+
+        Debug.Log($"[Triangulation.AddVertex] v.edge = {v.edge}");
     }
 
     private IEnumerator FlipEdgesCR() 
@@ -331,7 +344,7 @@ public partial class Triangulation : IEnumerable<Triangle>
         m[2,0] = c.x; m[2,1] = c.y; m[2,2] = c.x * c.x + c.y * c.y; m[2,3] = 1;
         m[3,0] = d.x; m[3,1] = d.y; m[3,2] = d.x * d.x + d.y * d.y; m[3,3] = 1;
 
-        return m.determinant <= 0; // D is outside C(ABC), so flip
+        return m.determinant >= 0; // D is inside Cicum(ABC) so the edge BD is delaunay
     }
 
     private Face CreateFace(HalfEdge eab, HalfEdge ebc, HalfEdge eca)

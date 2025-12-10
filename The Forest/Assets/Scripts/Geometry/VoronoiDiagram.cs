@@ -14,39 +14,57 @@ using System.Collections.Generic;
 namespace WordsOnPlay.Geometry
 {
 
-public partial class VoronoiDiagram
+public class VoronoiDiagram
 {   
     private HashSet<Vertex> vertices;
+    private Dictionary<Face,Vertex> mapFV;
 
-    public VoronoiDiagram(IEnumerable<Triangle> triangles)
+    public VoronoiDiagram(Triangulation triangulation)
+    {
+        MakeVertices(triangulation);
+        MakeEdges(triangulation);
+    }
+
+    private void MakeVertices(Triangulation triangulation)
     {
         vertices = new HashSet<Vertex>();
-        Dictionary<Triangle,Vertex> mapTV = new Dictionary<Triangle,Vertex>();
-        Dictionary<Face,Triangle> mapFT = new Dictionary<Face,Triangle>();
+        mapFV = new Dictionary<Face,Vertex>();
 
-        foreach (Triangle t in triangles)
+        // make a vertex at the circumcentre of each triangle
+        foreach (Triangle t in triangulation)
         {
             Vertex v = new Vertex(t.Circumcentre, t.Name);
             vertices.Add(v);
-            mapTV[t] = v;
-            mapFT[t.face] = t;
+            mapFV[t.face] = v;
         }
+    }
 
-        foreach (Triangle t in triangles)
+    private void MakeEdges(Triangulation triangulation)
+    {
+        // every vertex has three outgoing edges
+        // corresponding to the three neighbouring triangles
+
+        foreach (Triangle t in triangulation)
         {
-            Vertex v = mapTV[t];
-            for (int i = 0; i < 3; i++)
+            Vertex va = mapFV[t.face];
+
+            // add edges in clockwise order as the linked
+            // list construction reverses them
+            for (int i = 2; i >= 0; i--)
             {
-                HalfEdge e = t.edges[i].flip;
-                if (e != null)
+                Face fb = t.edges[i].flip.face;
+                if (fb != null)
                 {
-                    Triangle tNext = mapFT[e.face];
-                    Vertex vNext = mapTV[tNext];
-                    
-                                        
+                    Vertex vb = mapFV[fb];
+                    HalfEdge e = va.edge;
+                    va.edge = HalfEdge.CreateEdgePair(va, vb);
+                    va.edge.next = e;                    
                 }
+
             }
         }
+        
+
     }
 
 }
