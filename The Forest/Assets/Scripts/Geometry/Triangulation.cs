@@ -18,11 +18,17 @@ public partial class Triangulation : IEnumerable<Triangle>
 {
     private Rect bounds;
     private Triangle root;
+    public Triangle Root => root;
+
     private Dictionary<Face, Triangle> faceToTriangle;
     private HashSet<Triangle> leaves;
-    private HashSet<Vertex> vertices;
+
+    private Graph graph;
+    public Graph Graph => graph;
+
     private Queue<Vertex> vertexQueue = new Queue<Vertex>();
     private Queue<HalfEdge> flipQueue = new Queue<HalfEdge>();
+
     private bool isRunning = false;
     public bool IsRunning => isRunning;
 
@@ -40,11 +46,6 @@ public partial class Triangulation : IEnumerable<Triangle>
     public IEnumerator<Triangle> GetTriangleEnumerator()
     {
         return leaves.GetEnumerator();        
-    }
-
-    public IEnumerator<Vertex> GetVertexEnumerator()
-    {
-        return vertices.GetEnumerator();        
     }
 
 #endregion
@@ -74,19 +75,20 @@ public partial class Triangulation : IEnumerable<Triangle>
 
         faceToTriangle = new Dictionary<Face, Triangle>();
 
-        Vertex va = new Vertex(a, "R_a");
-        Vertex vb = new Vertex(b, "R_b");
-        Vertex vc = new Vertex(c, "R_c");
+        graph = new Graph();
+        Vertex va = graph.AddVertex(a, "R_a");
+        Vertex vb = graph.AddVertex(b, "R_b");
+        Vertex vc = graph.AddVertex(c, "R_c");
 
-        root = new Triangle(va, vb, vc);
+        root = new Triangle(graph, va, vb, vc);
         faceToTriangle[root.face] = root;
 
         leaves = new HashSet<Triangle> { root };
-        vertices = new HashSet<Vertex>{ va, vb, vc };
     }
 
-    public void EnqueueVertex(Vertex v)
+    public void AddVertex(Vector2 position, string name)
     {
+        Vertex v = graph.AddVertex(position, name);
         vertexQueue.Enqueue(v);
     }
 
@@ -115,8 +117,8 @@ public partial class Triangulation : IEnumerable<Triangle>
     private void AddVertex(Vertex v)
     {
         Debug.Log($"[Triangulation.AddVertex] Adding vertex {v.name}");
-        vertices.Add(v);
         Triangle t = EnclosingTriangle(v.position);
+        graph.RemoveFace(t.face);
         
         HalfEdge eab = t.edges[0];
         HalfEdge ebc = t.edges[1];
@@ -134,16 +136,11 @@ public partial class Triangulation : IEnumerable<Triangle>
         //       /_/     \_\
         //      b ----------c
 
-        HalfEdge eva = HalfEdge.CreateEdgePair(v, a);
-        HalfEdge evb = HalfEdge.CreateEdgePair(v, b);
-        HalfEdge evc = HalfEdge.CreateEdgePair(v, c);
-        Debug.Log($"[Triangulation.AddVertex] Adding edge {eva.Name}");
-        Debug.Log($"[Triangulation.AddVertex] Adding edge {evb.Name}");
-        Debug.Log($"[Triangulation.AddVertex] Adding edge {evc.Name}");
+        HalfEdge eva, eav, evb, ebv, evc, ecv;
 
-        HalfEdge eav = eva.flip;
-        HalfEdge ebv = evb.flip;
-        HalfEdge ecv = evc.flip;
+        (eva, eav) = graph.AddEdge(v, a);
+        (evb, ebv) = graph.AddEdge(v, b);
+        (evc, ecv) = graph.AddEdge(v, c);
 
         Face fvab = CreateFace(eab, ebv, eva);
         Face fvbc = CreateFace(ebc, ecv, evb);
@@ -202,6 +199,8 @@ public partial class Triangulation : IEnumerable<Triangle>
 
     private void FlipEdge(HalfEdge e)
     {
+        graph.RemoveEdge(e);
+
         HalfEdge ebd = e;
         HalfEdge eda = ebd.next;
         HalfEdge eab = eda.next;
@@ -220,13 +219,13 @@ public partial class Triangulation : IEnumerable<Triangle>
 
         Face fbda = ebd.face;
         Face fdbc = edb.face;
+        graph.RemoveFace(fbda);
+        graph.RemoveFace(fdbc);
 
         Vertex va = eab.fromVertex;
         Vertex vc = ecd.fromVertex;
 
-        HalfEdge eac = HalfEdge.CreateEdgePair(va, vc);
-        HalfEdge eca = eac.flip;
-
+        var (eac, eca) = graph.AddEdge(va, vc);
         Debug.Log($"[Triangulation.FlipEdge] Flipping {e.Name} to {eac.Name}");
 
         Triangle tabc = MakeTriangle(eab, ebc, eca);
@@ -257,7 +256,7 @@ public partial class Triangulation : IEnumerable<Triangle>
         eab.next = ebc;
         ebc.next = eca;
 
-        Face fabc = new Face(eca);
+        Face fabc = graph.AddFace(eca);
         eca.face = fabc;
         eab.face = fabc;
         ebc.face = fabc;
@@ -349,7 +348,7 @@ public partial class Triangulation : IEnumerable<Triangle>
 
     private Face CreateFace(HalfEdge eab, HalfEdge ebc, HalfEdge eca)
     {
-        Face face = new Face(eab);
+        Face face = graph.AddFace(eab);
         eab.next = ebc;
         ebc.next = eca;
         eca.next = eab;
@@ -432,21 +431,6 @@ public partial class Triangulation : IEnumerable<Triangle>
         Gizmos.color = (!IsInterior(e2) || IsDelaunay(e2)) ? Color.green : Color.red;
         Gizmos.DrawLine(c, a);
         
-    }
-
-    public void DrawVoronoiGizmo(Transform transform = null)
-    {
-        Gizmos.color = Color.magenta;
-        foreach (Triangle t in leaves)
-        {
-            Vector3 p = t.Circumcentre;
-            if (transform != null)
-            {
-                p = transform.TransformPoint(p);
-            }
-            Gizmos.DrawSphere(p, 0.1f);
-            Gizmos.DrawWireSphere(p, t.Radius);
-        }        
     }
 
 #endregion

@@ -29,7 +29,7 @@ public class TreeFactory : MonoBehaviour
 
 #region State
     private System.Random rng;
-    private Vertex[] vertices;
+    private Vector2[] vertices;
     private KDTree kdTree;
     private Triangulation triangulation;
 #endregion
@@ -44,7 +44,7 @@ public class TreeFactory : MonoBehaviour
         instance = this;
 
         rng = new System.Random(rngSeed);
-        vertices = new Vertex[nTrees];
+        vertices = new Vector2[nTrees];
         kdTree = new KDTree();
         GenerateTrees();
         Triangulate();
@@ -79,8 +79,8 @@ public class TreeFactory : MonoBehaviour
             TreeShadow tree = Instantiate(
                 treePrefab, transform.position, Quaternion.identity, transform);
             tree.transform.localPosition = pos;
-            vertices[i] = new Vertex(pos, $"T{i}");
-            kdTree.AddVertex(vertices[i]);
+            vertices[i] = pos;
+            kdTree.AddPoint(pos);
         }
 
         kdTree.Rebuild();
@@ -88,36 +88,20 @@ public class TreeFactory : MonoBehaviour
 
     private float NearestTreeDistance(Vector2 pos) 
     {
-        if (kdTree.Count == 0)
-        {
-            return float.PositiveInfinity;
-        }
-        Vertex v = kdTree.Nearest(pos);
-        return Vector2.Distance(v.position, pos);
+        Vector2? v = kdTree.Nearest(pos); 
+        return v == null ? float.PositiveInfinity : Vector2.Distance(v.Value, pos);
     }
 
     private void Triangulate()
     {
         triangulation = new Triangulation(bounds);
 
-        // Vertex a = new Vertex(bounds.Corner(0), "A");
-        // Vertex b = new Vertex(bounds.Corner(1), "B");
-        // Vertex c = new Vertex(bounds.Corner(2), "C");
-        // Vertex d = new Vertex(bounds.Corner(3), "D");
-
-        // triangulation.EnqueueVertex(a);
-        // triangulation.EnqueueVertex(b);
-        // triangulation.EnqueueVertex(c);
-        // triangulation.EnqueueVertex(d);
-
         for (int i = 0; i < vertices.Length; i++)
         {
-            triangulation.EnqueueVertex(vertices[i]);
+            triangulation.AddVertex(vertices[i], $"V{i}");
         }
 
         StartCoroutine(triangulation.RunCR());
-
-//        triangulation.RemoveRoot();
     }
 
     private void OnApplicationQuit()
@@ -128,11 +112,11 @@ public class TreeFactory : MonoBehaviour
 #endregion Init
 
 #region Public Methods
-    public Vector2 NearestTree(Vector2 pos) 
+    public Vector2? NearestTree(Vector2 pos) 
     {
         pos = transform.InverseTransformPoint(pos);
-        Vertex v = kdTree.Nearest(pos);
-        return transform.TransformPoint(v.position);
+        Vector2? v = kdTree.Nearest(pos);       
+        return v == null ? null : transform.TransformPoint(v.Value);
     }
 #endregion
 
@@ -169,7 +153,6 @@ public class TreeFactory : MonoBehaviour
             if (drawVoronoi && triangulation != null)
             {
                 Gizmos.color = Color.magenta;
-                triangulation.DrawVoronoiGizmo(transform);                
             }
         }
                 

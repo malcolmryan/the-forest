@@ -21,18 +21,9 @@ public class HalfEdge
     public string Name => $"{fromVertex.name},{flip.fromVertex.name}";
     public Vector2 Direction => next.fromVertex - fromVertex;
     
-    private HalfEdge(Vertex fromVertex)
+    internal HalfEdge(Vertex fromVertex)
     {
         this.fromVertex = fromVertex;
-    }
-
-    public static HalfEdge CreateEdgePair(Vertex a, Vertex b) 
-    {
-        HalfEdge e = new HalfEdge(a);
-        e.flip = new HalfEdge(b);
-        e.flip.flip = e;
-
-        return e;
     }
 
     /// <summary>

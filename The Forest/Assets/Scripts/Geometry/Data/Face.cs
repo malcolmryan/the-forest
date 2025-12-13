@@ -15,7 +15,7 @@ public class Face
 {
     public HalfEdge edge;
 
-    public Face(HalfEdge edge)
+    internal Face(HalfEdge edge)
     {
         this.edge = edge;
     }

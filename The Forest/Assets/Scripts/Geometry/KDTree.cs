@@ -20,25 +20,20 @@ public class KDTree
     private class KDNode 
     {
         public KDNode[] children;
-        public Vertex vertex;
+        public Vector2 point;
         public int splitAxis;
 
         public float SplitValue {
             get {
-                return vertex.position[splitAxis];
+                return point[splitAxis];
             }
         }
 
-        public KDNode(Vertex vertex, int splitAxis)
+        public KDNode(Vector2 point, int splitAxis)
         {
-            this.vertex = vertex;
+            this.point = point;
             this.splitAxis = splitAxis;
             this.children = new KDNode[2];
-        }
-
-        public int Child(Vertex v) 
-        {
-            return (v.position[splitAxis] <= SplitValue ? 0 : 1);
         }
 
         public int Child(Vector2 v) 
@@ -48,7 +43,7 @@ public class KDTree
 
     }
 
-    private class Comparer : IComparer<Vertex> 
+    private class Comparer : IComparer<Vector2> 
     {
         private int axis;
 
@@ -57,9 +52,9 @@ public class KDTree
             this.axis = axis;
         }
 
-        public int Compare(Vertex a, Vertex b)
+        public int Compare(Vector2 a, Vector2 b)
         {
-            return Math.Sign(a.position[axis] - b.position[axis]);
+            return Math.Sign(a[axis] - b[axis]);
         }
     }
 #endregion
@@ -87,13 +82,13 @@ public class KDTree
         root = null;
     }
 
-    public KDTree(Vertex[] vertices) 
+    public KDTree(Vector2[] points) 
     {
         dimension = 2;
         comparers = MakeComparers(dimension);
-        bounds = MakeBounds(vertices);
-        count = vertices.Length;
-        root = MakeTree(vertices, 0, vertices.Length, 0);
+        bounds = MakeBounds(points);
+        count = points.Length;
+        root = MakeTree(points, 0, points.Length, 0);
     }
 
     private Comparer[] MakeComparers(int dimension) 
@@ -113,23 +108,23 @@ public class KDTree
         return new Rect(min, max - min);
     }
 
-    private Rect MakeBounds(Vertex[] vertices)
+    private Rect MakeBounds(Vector2[] vertices)
     {
         Vector2 min = new Vector2(float.PositiveInfinity, float.PositiveInfinity);
         Vector2 max = new Vector2(float.NegativeInfinity, float.NegativeInfinity);
 
         for (int i = 0; i < vertices.Length; i++) 
         {
-            min.x = Mathf.Min(min.x, vertices[i].position.x);
-            min.y = Mathf.Min(min.y, vertices[i].position.y);
-            max.x = Mathf.Max(max.x, vertices[i].position.x);
-            max.y = Mathf.Max(max.y, vertices[i].position.y);
+            min.x = Mathf.Min(min.x, vertices[i].x);
+            min.y = Mathf.Min(min.y, vertices[i].y);
+            max.x = Mathf.Max(max.x, vertices[i].x);
+            max.y = Mathf.Max(max.y, vertices[i].y);
         }
 
         return new Rect(min, max - min);
     }
 
-    private KDNode MakeTree(Vertex[] vertices, int start, int len, int axis, KDNode parent = null) 
+    private KDNode MakeTree(Vector2[] vertices, int start, int len, int axis, KDNode parent = null) 
     {
         if (vertices.Length == 0)
         {
@@ -161,12 +156,12 @@ public class KDTree
 #region Update
     public void Rebuild() 
     {
-        List<Vertex> vertices = new List<Vertex>();
+        List<Vector2> vertices = new List<Vector2>();
         CollectVertices(root, vertices);
         root = MakeTree(vertices.ToArray(), 0, vertices.Count, 0);
     }
 
-    private void CollectVertices(KDNode node, List<Vertex> vertices)
+    private void CollectVertices(KDNode node, List<Vector2> vertices)
     {
         if (node == null)
         {
@@ -174,18 +169,18 @@ public class KDTree
         }
 
         CollectVertices(node.children[0], vertices);
-        vertices.Add(node.vertex);
+        vertices.Add(node.point);
         CollectVertices(node.children[1], vertices);
     }
 
-    public void AddVertex(Vertex v)
+    public void AddPoint(Vector2 v)
     {
         count++;
       
         if (root == null) 
         {
             root = new KDNode(v, 0);
-            bounds = new Rect(v.position.x, v.position.y, 0, 0);
+            bounds = new Rect(v.x, v.y, 0, 0);
         }
         else 
         {
@@ -198,7 +193,7 @@ public class KDTree
         }
     }
 
-    private KDNode FindNode(KDNode node, Vertex v)
+    private KDNode FindNode(KDNode node, Vector2 v)
     {
         int next = node.Child(v);
 
@@ -210,15 +205,15 @@ public class KDTree
         return node;
     }
 
-    private void UpdateBounds(Vertex v)
+    private void UpdateBounds(Vector2 v)
     {
         Vector2 min = bounds.min;
         Vector2 max = bounds.max;
 
-        min.x = Mathf.Min(min.x, v.position.x);
-        min.y = Mathf.Min(min.y, v.position.y);
-        max.x = Mathf.Max(max.x, v.position.x);
-        max.y = Mathf.Max(max.y, v.position.y);
+        min.x = Mathf.Min(min.x, v.x);
+        min.y = Mathf.Min(min.y, v.y);
+        max.x = Mathf.Max(max.x, v.x);
+        max.y = Mathf.Max(max.y, v.y);
 
         bounds.min = min;
         bounds.max = max;
@@ -227,7 +222,7 @@ public class KDTree
 
 #region Get Nearest
 
-    public Vertex Nearest(Vector2 v)
+    public Vector2? Nearest(Vector2 v)
     {
         KDNode nearest = null;
         float distance = float.PositiveInfinity;
@@ -239,7 +234,7 @@ public class KDTree
         }
         else 
         {
-            return nearest.vertex;
+            return nearest.point;
         }
     }
 
@@ -250,7 +245,7 @@ public class KDTree
             return;
         }
 
-        float d = Vector2.Distance(v, node.vertex.position);
+        float d = Vector2.Distance(v, node.point);
         if (d < dNearest) 
         {
             nearest = node;
@@ -287,8 +282,8 @@ public class KDTree
         Vector2 min = rect.min;
         Vector2 max = rect.max;
 
-        min[node.splitAxis] = node.vertex.position[node.splitAxis];
-        max[node.splitAxis] = node.vertex.position[node.splitAxis];
+        min[node.splitAxis] = node.point[node.splitAxis];
+        max[node.splitAxis] = node.point[node.splitAxis];
 
         if (transform != null)
         {

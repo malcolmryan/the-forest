@@ -57,9 +57,7 @@ public class TriangulationTest : MonoBehaviour
     private void AddVertex(Vector3 point, string name = "V") 
     {
         Vector2 p = transform.InverseTransformPoint(point);
-        Vertex v = new Vertex(p, name);
-
-        triangulation.EnqueueVertex(v);
+        triangulation.AddVertex(p, name);
 
         if (!triangulation.IsRunning)
         {
@@ -80,7 +78,6 @@ public class TriangulationTest : MonoBehaviour
             if (triangulation != null)
             {
                 triangulation.DrawGizmo(transform);
-                triangulation.DrawVoronoiGizmo(transform);
             }
         }
                 

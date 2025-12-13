@@ -51,12 +51,12 @@ public class Triangle
         }        
     }
 
-    public Triangle(Vertex va, Vertex vb, Vertex vc) 
+    public Triangle(Graph graph, Vertex va, Vertex vb, Vertex vc) 
     {
         this.edges = new HalfEdge[3];
-        va.edge = edges[0] = HalfEdge.CreateEdgePair(va, vb);
-        vb.edge = edges[1] = HalfEdge.CreateEdgePair(vb, vc);
-        vc.edge = edges[2] = HalfEdge.CreateEdgePair(vc, va);
+        va.edge = edges[0] = graph.AddEdge(va, vb).forward;
+        vb.edge = edges[1] = graph.AddEdge(vb, vc).forward;
+        vc.edge = edges[2] = graph.AddEdge(vc, va).forward;
                     
         edges[0].next = edges[1];
         edges[1].next = edges[2];
@@ -66,7 +66,7 @@ public class Triangle
         edges[1].flip.next = edges[0];
         edges[2].flip.next = edges[1];
 
-        this.face = new Face(edges[0]);
+        this.face = graph.AddFace(edges[0]);
         edges[0].face = face;
         edges[1].face = face;
         edges[2].face = face;

@@ -49,9 +49,7 @@ public class CircleTriangulationTest : MonoBehaviour
 
     private void AddVertex(Vector2 point, string name = "V") 
     {
-        Vertex v = new Vertex(point, name);
-
-        triangulation.EnqueueVertex(v);
+        triangulation.AddVertex(point, name);
 
         if (!triangulation.IsRunning)
         {

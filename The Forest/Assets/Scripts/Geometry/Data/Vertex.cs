@@ -17,7 +17,7 @@ public class Vertex
     public HalfEdge edge;
     public string name;
 
-    public Vertex(Vector2 position, string name)
+    internal Vertex(Vector2 position, string name)
     {
         this.position = position;
         this.name = name;
