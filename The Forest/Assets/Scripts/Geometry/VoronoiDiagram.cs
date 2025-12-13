@@ -16,26 +16,54 @@ namespace WordsOnPlay.Geometry
 
 public class VoronoiDiagram
 {   
-    private HashSet<Vertex> vertices;
-    private Dictionary<Face,Vertex> mapFV;
+    private Graph graph;
+    public Graph Graph => graph;
+
+    private Dictionary<Face,Vertex> mapFV;  // old face to new vertex
+    private Dictionary<Vertex,Face> mapVF;  // old vertex to new face
 
     public VoronoiDiagram(Triangulation triangulation)
     {
+        graph = new Graph();
         MakeVertices(triangulation);
+        MakeFaces(triangulation);
         MakeEdges(triangulation);
     }
 
     private void MakeVertices(Triangulation triangulation)
     {
-        vertices = new HashSet<Vertex>();
         mapFV = new Dictionary<Face,Vertex>();
 
         // make a vertex at the circumcentre of each triangle
         foreach (Triangle t in triangulation)
-        {
-            Vertex v = new Vertex(t.Circumcentre, t.Name);
-            vertices.Add(v);
+        {     
+            Vertex v = graph.AddVertex(t.Circumcentre, t.Name);
             mapFV[t.face] = v;
+        }
+    }
+
+    private void MakeFaces(Triangulation triangulation)
+    {
+        mapVF = new Dictionary<Vertex,Face>();
+
+        Triangle root = triangulation.Root;
+        Vertex rA = root.edges[0].fromVertex;
+        Vertex rB = root.edges[1].fromVertex;
+        Vertex rC = root.edges[2].fromVertex;
+
+        // make a face for every vertex
+        foreach (Vertex v in triangulation.Graph.Vertices)
+        {     
+            if (v == rA || v == rB || v == rC)
+            {
+                // Don't create faces for the root vertices
+                mapVF[v] = null;                
+            }
+            else
+            {
+                Face f = graph.AddFace();
+                mapVF[v] = f;                    
+            }
         }
     }
 
@@ -46,21 +74,55 @@ public class VoronoiDiagram
 
         foreach (Triangle t in triangulation)
         {
-            Vertex va = mapFV[t.face];
 
-            // add edges in clockwise order as the linked
-            // list construction reverses them
-            for (int i = 2; i >= 0; i--)
+            //  FROM:                  TO:
+            //      F1                   v1
+            //    c-----b                 |
+            //     \ F /       ===>    Fc v  Fb
+            //   F2 \ / F0               / \ 
+            //       a                 v2   v0
+            //                            Fa
+
+            Face f = t.face;
+            Vertex v = mapFV[f];
+            (HalfEdge forward, HalfEdge backward)? ePrev = null;
+            HalfEdge eOld = f.edge;
+
+            for (int i = 0 ; i < 3; i++)
             {
-                Face fb = t.edges[i].flip.face;
-                if (fb != null)
-                {
-                    Vertex vb = mapFV[fb];
-                    HalfEdge e = va.edge;
-                    va.edge = HalfEdge.CreateEdgePair(va, vb);
-                    va.edge.next = e;                    
-                }
+                Vertex vOld = eOld.fromVertex;      
+                Face fOld = eOld.flip.face;
 
+                if (fOld != null)
+                {
+                    Vertex vNew = mapFV[fOld];
+                    Face fNew = mapVF[vOld];
+                    var eNew = graph.GetOrAddEdge(v,vNew);
+                    eNew.backward.face = fNew;
+
+                    if (fNew != null && fNew.edge == null)
+                    {
+                        fNew.edge = eNew.backward;                        
+                    }
+
+                    if (v.edge == null)
+                    {
+                        // configure this edge at the end of the loop
+                        vNew.edge = eNew.forward;
+                    }
+                    else 
+                    {
+                        eNew.backward.next = ePrev.Value.forward;                    
+                    }
+                    ePrev = eNew;
+                    eOld = eOld.next;                                    
+                }
+            }
+
+            if (v.edge != null)
+            {
+                // close the loop
+                v.edge.flip.next = ePrev.Value.forward;
             }
         }
         
