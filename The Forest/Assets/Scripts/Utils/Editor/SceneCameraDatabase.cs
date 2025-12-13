@@ -41,7 +41,14 @@ public class SceneCameraDatabase : ScriptableObject
 
     public SceneCamera GetSceneCamera(string guid)
     {
-        return cameras[guid];
+        if (cameras.ContainsKey(guid))
+        {
+            return cameras[guid];            
+        }
+        else
+        {
+            return null;
+        }
     }
 
     public void PutSceneCamera(string guid, SceneCamera camera)
