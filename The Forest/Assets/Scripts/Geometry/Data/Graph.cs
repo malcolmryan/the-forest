@@ -20,7 +20,7 @@ namespace WordsOnPlay.Geometry
         public IEnumerable<Vertex> Vertices => vertices;
 
         private HashSet<(HalfEdge, HalfEdge)> edges;
-        public IEnumerable<(HalfEdge, HalfEdge)> Edges => edges;
+        public IEnumerable<(HalfEdge forward, HalfEdge backward)> Edges => edges;
         private Dictionary<(Vertex, Vertex), (HalfEdge forward, HalfEdge backward)> edgeMap;
 
         private HashSet<Face> faces;

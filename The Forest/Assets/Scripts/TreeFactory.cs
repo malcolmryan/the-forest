@@ -32,6 +32,7 @@ public class TreeFactory : MonoBehaviour
     private Vector2[] vertices;
     private KDTree kdTree;
     private Triangulation triangulation;
+    private VoronoiDiagram voronoi;
 #endregion
 
 #region Init & Destroy
@@ -44,10 +45,25 @@ public class TreeFactory : MonoBehaviour
         instance = this;
 
         rng = new System.Random(rngSeed);
+        BuildMap();
+    }
+
+    private void OnApplicationQuit()
+    {
+        triangulation = null;
+        kdTree = null;
+    }
+
+#endregion Init
+
+#region Map generation
+    private void BuildMap()
+    {
         vertices = new Vector2[nTrees];
         kdTree = new KDTree();
         GenerateTrees();
         Triangulate();
+        voronoi = new VoronoiDiagram(triangulation);
     }
 
     private void GenerateTrees()
@@ -101,15 +117,10 @@ public class TreeFactory : MonoBehaviour
             triangulation.AddVertex(vertices[i], $"V{i}");
         }
 
-        StartCoroutine(triangulation.RunCR());
+        triangulation.Run();
     }
+#endregion
 
-    private void OnApplicationQuit()
-    {
-        triangulation = null;
-        kdTree = null;
-    }
-#endregion Init
 
 #region Public Methods
     public Vector2? NearestTree(Vector2 pos) 
@@ -153,6 +164,7 @@ public class TreeFactory : MonoBehaviour
             if (drawVoronoi && triangulation != null)
             {
                 Gizmos.color = Color.magenta;
+                voronoi.DrawGizmos();
             }
         }
                 
