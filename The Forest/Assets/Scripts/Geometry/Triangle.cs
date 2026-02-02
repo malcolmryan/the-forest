@@ -51,29 +51,6 @@ public class Triangle
         }        
     }
 
-    public Triangle(Graph graph, Vertex va, Vertex vb, Vertex vc) 
-    {
-        this.edges = new HalfEdge[3];
-        va.edge = edges[0] = graph.AddEdge(va, vb).forward;
-        vb.edge = edges[1] = graph.AddEdge(vb, vc).forward;
-        vc.edge = edges[2] = graph.AddEdge(vc, va).forward;
-                    
-        edges[0].next = edges[1];
-        edges[1].next = edges[2];
-        edges[2].next = edges[0];
-
-        edges[0].flip.next = edges[2];
-        edges[1].flip.next = edges[0];
-        edges[2].flip.next = edges[1];
-
-        this.face = graph.AddFace(edges[0]);
-        edges[0].face = face;
-        edges[1].face = face;
-        edges[2].face = face;
-
-        this.children = null;
-    }
-
     public Triangle(HalfEdge e0, HalfEdge e1, HalfEdge e2)
     {
         this.edges = new HalfEdge[3];

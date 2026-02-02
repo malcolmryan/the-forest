@@ -20,25 +20,26 @@ MonoBehaviour:
     - 7436812d970be4998ac6f7e8b1993d31
     - 6af47f142294d4b278650dcc87cc6123
     - faba8f7b79c0141b89ec5ff347f52f85
+    - e3db00a21a0f445a4b0b6c1ab2f5c795
     m_Values:
-    - pivot: {x: -0.23109224, y: 2.3916037, z: -9.907968}
+    - pivot: {x: 0.04218657, y: 2.290823, z: 0.06429788}
       rotation: {x: 0, y: 0, z: 0, w: 0}
       orthographic: 1
       isRotationLocked: 0
       in2DMode: 1
-      size: 2.9211612
+      size: 3.5702472
     - pivot: {x: -3.9107695, y: -0.8506578, z: -10.381517}
       rotation: {x: 0, y: 0, z: 0, w: 0}
       orthographic: 1
       isRotationLocked: 0
       in2DMode: 1
       size: 50.276222
-    - pivot: {x: -0.23109224, y: 2.3916037, z: -9.907968}
+    - pivot: {x: 0.9027646, y: 3.0622706, z: -9.8913765}
       rotation: {x: 0, y: 0, z: 0, w: 0}
       orthographic: 1
       isRotationLocked: 0
       in2DMode: 1
-      size: 2.9211612
+      size: 1.2475542
     - pivot: {x: -0.23109224, y: 2.3916037, z: -9.907968}
       rotation: {x: 0, y: 0, z: 0, w: 0}
       orthographic: 1
@@ -57,3 +58,9 @@ MonoBehaviour:
       isRotationLocked: 0
       in2DMode: 1
       size: 5.8391347
+    - pivot: {x: -2.6149786, y: -0.89655864, z: 0.026947677}
+      rotation: {x: 0, y: 0, z: 0, w: 0}
+      orthographic: 1
+      isRotationLocked: 0
+      in2DMode: 1
+      size: 7.305266

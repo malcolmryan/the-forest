@@ -16,6 +16,7 @@ public class Vertex
     public Vector2 position;
     public HalfEdge edge;
     public string name;
+    public override string ToString() => name;
 
     internal Vertex(Vector2 position, string name)
     {

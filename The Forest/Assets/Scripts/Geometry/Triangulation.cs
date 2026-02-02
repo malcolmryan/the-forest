@@ -50,42 +50,45 @@ public partial class Triangulation : IEnumerable<Triangle>
 
 #endregion
 
+#region Initialisation
     public Triangulation(Rect bounds)
     {
+        graph = new Graph();
         this.bounds = bounds;
 
         float x = bounds.xMin;
         float y = bounds.yMin;
         float w = bounds.width;
         float h = bounds.height;
+        x += w/2;
 
-        // 
         // Enclose the bounds in a triangle as:
         //   c--+-----+--b
         //    \ |     | /
-        //     \|     |/
-        //      +-----+
+        //     \|(x,y)|/
+        //      +--*--+
         //       \   /
         //        \ /
         //         a
 
-        Vector2 a = new Vector2(x+w/2, y-h);
-        Vector2 b = new Vector2(x+w+w/2, y+h);
-        Vector2 c = new Vector2(x-w/2, y+h);
+        // make the triangle bigger than the bounding box
+        w = w + 1f;
+        h = h + 1f;
+
+        Vector2 a = new Vector2(x, y-h);
+        Vector2 b = new Vector2(x+w, y+h);
+        Vector2 c = new Vector2(x-w, y+h);
 
         faceToTriangle = new Dictionary<Face, Triangle>();
 
-        graph = new Graph();
-        Vertex va = graph.AddVertex(a, "R_a");
-        Vertex vb = graph.AddVertex(b, "R_b");
-        Vertex vc = graph.AddVertex(c, "R_c");
-
-        root = new Triangle(graph, va, vb, vc);
+        root = MakeRoot(a, b, c);
         faceToTriangle[root.face] = root;
 
         leaves = new HashSet<Triangle> { root };
     }
+#endregion
 
+#region Public Methods
     public void AddVertex(Vector2 position, string name)
     {
         Vertex v = graph.AddVertex(position, name);
@@ -114,6 +117,55 @@ public partial class Triangulation : IEnumerable<Triangle>
         }
     }
 
+    public Graph MakeGraph() 
+    {
+        Graph clone = GraphOperations.Clone(graph);
+
+        for (int i = 0; i < 3; i++)
+        {
+            Vertex v = GraphOperations.FindVertex(clone, root.edges[0].fromVertex.name);
+            GraphOperations.DeleteVertex(clone, v);            
+        }
+
+        return graph;
+    }
+#endregion
+
+#region Private methods
+    private Triangle MakeRoot(Vector2 a, Vector2 b, Vector2 c)
+    {        
+        Vertex va = graph.AddVertex(a, "Ra");
+        Vertex vb = graph.AddVertex(b, "Rb");
+        Vertex vc = graph.AddVertex(c, "Rc");
+
+        (HalfEdge eab, HalfEdge eba) = graph.AddEdgePair(va, vb);
+        (HalfEdge ebc, HalfEdge ecb) = graph.AddEdgePair(vb, vc);
+        (HalfEdge eca, HalfEdge eac) = graph.AddEdgePair(vc, va);
+                    
+        va.edge = eab;
+        vb.edge = ebc;
+        vc.edge = eca;
+
+        eab.next = ebc;
+        ebc.next = eca;
+        eca.next = eab;
+
+        ecb.next = eba;
+        eba.next = eac;
+        eac.next = ecb;
+
+        Face face = graph.AddFace(eab);
+        eab.face = face;
+        ebc.face = face;
+        eca.face = face;
+
+        ecb.face = graph.Exterior;
+        eba.face = graph.Exterior;
+        eac.face = graph.Exterior;
+
+        return new Triangle(eab, ebc, eca);
+    }            
+
     private void AddVertex(Vertex v)
     {
         Debug.Log($"[Triangulation.AddVertex] Adding vertex {v.name}");
@@ -138,9 +190,9 @@ public partial class Triangulation : IEnumerable<Triangle>
 
         HalfEdge eva, eav, evb, ebv, evc, ecv;
 
-        (eva, eav) = graph.AddEdge(v, a);
-        (evb, ebv) = graph.AddEdge(v, b);
-        (evc, ecv) = graph.AddEdge(v, c);
+        (eva, eav) = graph.AddEdgePair(v, a);
+        (evb, ebv) = graph.AddEdgePair(v, b);
+        (evc, ecv) = graph.AddEdgePair(v, c);
 
         Face fvab = CreateFace(eab, ebv, eva);
         Face fvbc = CreateFace(ebc, ecv, evb);
@@ -199,7 +251,7 @@ public partial class Triangulation : IEnumerable<Triangle>
 
     private void FlipEdge(HalfEdge e)
     {
-        graph.RemoveEdge(e);
+        graph.RemoveEdgePair(e);
 
         HalfEdge ebd = e;
         HalfEdge eda = ebd.next;
@@ -225,8 +277,8 @@ public partial class Triangulation : IEnumerable<Triangle>
         Vertex va = eab.fromVertex;
         Vertex vc = ecd.fromVertex;
 
-        var (eac, eca) = graph.AddEdge(va, vc);
-        Debug.Log($"[Triangulation.FlipEdge] Flipping {e.Name} to {eac.Name}");
+        var (eac, eca) = graph.AddEdgePair(va, vc);
+        Debug.Log($"[Triangulation.FlipEdge] Flipping {e} to {eac}");
 
         Triangle tabc = MakeTriangle(eab, ebc, eca);
         Triangle tacd = MakeTriangle(eac, ecd, eda);
@@ -265,32 +317,6 @@ public partial class Triangulation : IEnumerable<Triangle>
         faceToTriangle[fabc] = tabc;
         
         return tabc;
-    }
-
-    public void RemoveRoot() 
-    {
-        HashSet<Triangle> newLeaves = new HashSet<Triangle>();
-
-        HashSet<Vertex> rootVertices = new HashSet<Vertex>();
-        rootVertices.Add(root.edges[0].fromVertex);
-        rootVertices.Add(root.edges[1].fromVertex);
-        rootVertices.Add(root.edges[2].fromVertex);
-
-        foreach (Triangle t in leaves)
-        {
-            if (rootVertices.Contains(t.edges[0].fromVertex)
-            || rootVertices.Contains(t.edges[1].fromVertex) 
-            || rootVertices.Contains(t.edges[2].fromVertex))
-            {
-                continue;
-            }
-            else 
-            {
-                newLeaves.Add(t);
-            }
-        }
-
-        leaves = newLeaves;
     }
 
     private bool IsInterior(HalfEdge edge)
@@ -382,7 +408,7 @@ public partial class Triangulation : IEnumerable<Triangle>
 
         return t;
     }
-
+#endregion 
 
 #region Gizmos
     public void DrawGizmo(Transform transform = null)

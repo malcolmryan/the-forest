@@ -17,6 +17,16 @@ public static class Vector2Extensions  {
 	}
 
 	/**
+	 * Test if vector P1->P2 is on the left of P1->P3
+	 */
+
+	public static bool IsOnLeft(this Vector2 p1, Vector2 p2, Vector2 p3) {
+		Vector2 v12 = p2-p1;
+		Vector2 v13 = p3-p1;
+		return v12.IsOnLeft(v13);
+	}
+
+	/**
 	 * Rorate a 2D vector anticlockwise by the given angle (in degrees)
 	 */
 

@@ -13,7 +13,7 @@ public sealed class ObjectPool : MonoBehaviour
 		public GameObject prefab;
 	}
 
-	static ObjectPool _instance;
+	static ObjectPool instance;
 	static List<GameObject> tempList = new List<GameObject>();
 	
 	Dictionary<GameObject, List<GameObject>> pooledObjects = new Dictionary<GameObject, List<GameObject>>();
@@ -26,7 +26,7 @@ public sealed class ObjectPool : MonoBehaviour
 
 	void Awake()
 	{
-		_instance = this;
+		instance = this;
 		if (startupPoolMode == StartupPoolMode.Awake)
 			CreateStartupPools();
 	}
@@ -39,10 +39,10 @@ public sealed class ObjectPool : MonoBehaviour
 
 	public static void CreateStartupPools()
 	{
-		if (!instance.startupPoolsCreated)
+		if (!Instance.startupPoolsCreated)
 		{
-			instance.startupPoolsCreated = true;
-			var pools = instance.startupPools;
+			Instance.startupPoolsCreated = true;
+			var pools = Instance.startupPools;
 			if (pools != null && pools.Length > 0)
 				for (int i = 0; i < pools.Length; ++i)
 					CreatePool(pools[i].prefab, pools[i].size);
@@ -55,16 +55,16 @@ public sealed class ObjectPool : MonoBehaviour
 	}
 	public static void CreatePool(GameObject prefab, int initialPoolSize)
 	{
-		if (prefab != null && !instance.pooledObjects.ContainsKey(prefab))
+		if (prefab != null && !Instance.pooledObjects.ContainsKey(prefab))
 		{
 			var list = new List<GameObject>();
-			instance.pooledObjects.Add(prefab, list);
+			Instance.pooledObjects.Add(prefab, list);
 
 			if (initialPoolSize > 0)
 			{
 				bool active = prefab.activeSelf;
 				prefab.SetActive(false);
-				Transform parent = instance.transform;
+				Transform parent = Instance.transform;
 				while (list.Count < initialPoolSize)
 				{
 					var obj = (GameObject)Object.Instantiate(prefab);
@@ -105,7 +105,7 @@ public sealed class ObjectPool : MonoBehaviour
 		List<GameObject> list;
 		Transform trans;
 		GameObject obj;
-		if (instance.pooledObjects.TryGetValue(prefab, out list))
+		if (Instance.pooledObjects.TryGetValue(prefab, out list))
 		{
 			obj = null;
 			if (list.Count > 0)
@@ -122,7 +122,7 @@ public sealed class ObjectPool : MonoBehaviour
 					trans.localPosition = position;
 					trans.localRotation = rotation;
 					obj.SetActive(true);
-					instance.spawnedObjects.Add(obj, prefab);
+					Instance.spawnedObjects.Add(obj, prefab);
 					return obj;
 				}
 			}
@@ -131,7 +131,7 @@ public sealed class ObjectPool : MonoBehaviour
 			trans.parent = parent;
 			trans.localPosition = position;
 			trans.localRotation = rotation;
-			instance.spawnedObjects.Add(obj, prefab);
+			Instance.spawnedObjects.Add(obj, prefab);
 			return obj;
 		}
 		else
@@ -172,16 +172,16 @@ public sealed class ObjectPool : MonoBehaviour
 	public static void Recycle(GameObject obj)
 	{
 		GameObject prefab;
-		if (instance.spawnedObjects.TryGetValue(obj, out prefab))
+		if (Instance.spawnedObjects.TryGetValue(obj, out prefab))
 			Recycle(obj, prefab);
 		else
 			Object.Destroy(obj);
 	}
 	static void Recycle(GameObject obj, GameObject prefab)
 	{
-		instance.pooledObjects[prefab].Add(obj);
-		instance.spawnedObjects.Remove(obj);
-		obj.transform.parent = instance.transform;
+		Instance.pooledObjects[prefab].Add(obj);
+		Instance.spawnedObjects.Remove(obj);
+		obj.transform.parent = Instance.transform;
 		obj.SetActive(false);
 	}
 
@@ -191,7 +191,7 @@ public sealed class ObjectPool : MonoBehaviour
 	}
 	public static void RecycleAll(GameObject prefab)
 	{
-		foreach (var item in instance.spawnedObjects)
+		foreach (var item in Instance.spawnedObjects)
 			if (item.Value == prefab)
 				tempList.Add(item.Key);
 		for (int i = 0; i < tempList.Count; ++i)
@@ -200,7 +200,7 @@ public sealed class ObjectPool : MonoBehaviour
 	}
 	public static void RecycleAll()
 	{
-		tempList.AddRange(instance.spawnedObjects.Keys);
+		tempList.AddRange(Instance.spawnedObjects.Keys);
 		for (int i = 0; i < tempList.Count; ++i)
 			Recycle(tempList[i]);
 		tempList.Clear();
@@ -208,7 +208,7 @@ public sealed class ObjectPool : MonoBehaviour
 	
 	public static bool IsSpawned(GameObject obj)
 	{
-		return instance.spawnedObjects.ContainsKey(obj);
+		return Instance.spawnedObjects.ContainsKey(obj);
 	}
 
 	public static int CountPooled<T>(T prefab) where T : Component
@@ -218,7 +218,7 @@ public sealed class ObjectPool : MonoBehaviour
 	public static int CountPooled(GameObject prefab)
 	{
 		List<GameObject> list;
-		if (instance.pooledObjects.TryGetValue(prefab, out list))
+		if (Instance.pooledObjects.TryGetValue(prefab, out list))
 			return list.Count;
 		return 0;
 	}
@@ -230,7 +230,7 @@ public sealed class ObjectPool : MonoBehaviour
 	public static int CountSpawned(GameObject prefab)
 	{
 		int count = 0 ;
-		foreach (var instancePrefab in instance.spawnedObjects.Values)
+		foreach (var instancePrefab in Instance.spawnedObjects.Values)
 			if (prefab == instancePrefab)
 				++count;
 		return count;
@@ -239,7 +239,7 @@ public sealed class ObjectPool : MonoBehaviour
 	public static int CountAllPooled()
 	{
 		int count = 0;
-		foreach (var list in instance.pooledObjects.Values)
+		foreach (var list in Instance.pooledObjects.Values)
 			count += list.Count;
 		return count;
 	}
@@ -251,7 +251,7 @@ public sealed class ObjectPool : MonoBehaviour
 		if (!appendList)
 			list.Clear();
 		List<GameObject> pooled;
-		if (instance.pooledObjects.TryGetValue(prefab, out pooled))
+		if (Instance.pooledObjects.TryGetValue(prefab, out pooled))
 			list.AddRange(pooled);
 		return list;
 	}
@@ -262,7 +262,7 @@ public sealed class ObjectPool : MonoBehaviour
 		if (!appendList)
 			list.Clear();
 		List<GameObject> pooled;
-		if (instance.pooledObjects.TryGetValue(prefab.gameObject, out pooled))
+		if (Instance.pooledObjects.TryGetValue(prefab.gameObject, out pooled))
 			for (int i = 0; i < pooled.Count; ++i)
 				list.Add(pooled[i].GetComponent<T>());
 		return list;
@@ -274,7 +274,7 @@ public sealed class ObjectPool : MonoBehaviour
 			list = new List<GameObject>();
 		if (!appendList)
 			list.Clear();
-		foreach (var item in instance.spawnedObjects)
+		foreach (var item in Instance.spawnedObjects)
 			if (item.Value == prefab)
 				list.Add(item.Key);
 		return list;
@@ -286,7 +286,7 @@ public sealed class ObjectPool : MonoBehaviour
 		if (!appendList)
 			list.Clear();
 		var prefabObj = prefab.gameObject;
-		foreach (var item in instance.spawnedObjects)
+		foreach (var item in Instance.spawnedObjects)
 			if (item.Value == prefabObj)
 				list.Add(item.Key.GetComponent<T>());
 		return list;
@@ -295,7 +295,7 @@ public sealed class ObjectPool : MonoBehaviour
 	public static void DestroyPooled(GameObject prefab)
 	{
 		List<GameObject> pooled;
-		if (instance.pooledObjects.TryGetValue(prefab, out pooled))
+		if (Instance.pooledObjects.TryGetValue(prefab, out pooled))
 		{
 			for (int i = 0; i < pooled.Count; ++i)
 				GameObject.Destroy(pooled[i]);
@@ -317,23 +317,23 @@ public sealed class ObjectPool : MonoBehaviour
 		DestroyAll(prefab.gameObject);
 	}
 
-	public static ObjectPool instance
+	public static ObjectPool Instance
 	{
 		get
 		{
-			if (_instance != null)
-				return _instance;
+			if (instance != null)
+				return instance;
 
-			_instance = Object.FindObjectOfType<ObjectPool>();
-			if (_instance != null)
-				return _instance;
+			instance = Object.FindAnyObjectByType<ObjectPool>();
+			if (instance != null)
+				return instance;
 
 			var obj = new GameObject("ObjectPool");
 			obj.transform.localPosition = Vector3.zero;
 			obj.transform.localRotation = Quaternion.identity;
 			obj.transform.localScale = Vector3.one;
-			_instance = obj.AddComponent<ObjectPool>();
-			return _instance;
+			instance = obj.AddComponent<ObjectPool>();
+			return instance;
 		}
 	}
 }

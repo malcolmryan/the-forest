@@ -266,6 +266,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1218380803}
   - component: {fileID: 1218380804}
+  - component: {fileID: 1218380805}
   m_Layer: 0
   m_Name: Triangulation
   m_TagString: Untagged
@@ -306,6 +307,30 @@ MonoBehaviour:
     y: 0
     width: 8
     height: 5
+  drawTriangulationGizmo: 0
+--- !u!114 &1218380805
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1218380802}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2bf771551d7d34137bbddbc5fcbc5dff, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  parentTransform: {fileID: 0}
+  drawVertices: 0
+  labelVertices: 1
+  vertexSize: 0.1
+  defaultVertexColor: {r: 1, g: 1, b: 1, a: 1}
+  drawEdges: 1
+  arrowSize: 0.1
+  arrowRotation: {x: 0, y: 0, z: -0.25881904, w: 0.9659258}
+  defaultEdgeColor: {r: 1, g: 1, b: 1, a: 1}
+  drawFaces: 0
+  defaultFaceColor: {r: 1, g: 1, b: 1, a: 1}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0

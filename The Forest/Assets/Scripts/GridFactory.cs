@@ -1,50 +1,58 @@
 /**
- *
- *
+ * 
  * Author: Malcolm Ryan
  * Version: 1.0
- * For Unity Version: 2022.3
+ * For Unity Version: 6000.0.53f1
  */
 
 using UnityEngine;
 using WordsOnPlay.Utils;
 using WordsOnPlay.Geometry;
-using System.Collections;
 
-public class TreeFactory : MonoBehaviour
+public class GridFactory : MonoBehaviour
 {
-
-#region Singleton
-    private static TreeFactory instance = null;
-    public static TreeFactory Instance { get { return instance; } }
-#endregion 
 
 #region Parameters
     [SerializeField] private Rect bounds;
-    [SerializeField] private int nTrees;
-    [SerializeField] private TreeShadow treePrefab;
+    [SerializeField] private int nCells;
+    [SerializeField] private Transform pointPrefab;
     [SerializeField] private int nFails = 10;
     [SerializeField] private int rngSeed = 0;
 #endregion 
+
+#region Connected Objects
+#endregion
+
+#region Components
+    private GraphGizmo graphGizmo;
+#endregion
 
 #region State
     private System.Random rng;
     private Vector2[] vertices;
     private KDTree kdTree;
     private Triangulation triangulation;
+    private Graph graph;
+#endregion
+
+#region Properties
+    public Graph Graph => graph;
+#endregion
+
+#region Events
 #endregion
 
 #region Init & Destroy
     void Awake()
     {
-        if (instance != null)
-        {
-            Debug.LogError("There are multiple TreeFactories in the Scene.");
-        }
-        instance = this;
-
         rng = new System.Random(rngSeed);
         BuildMap();
+
+        graphGizmo = GetComponent<GraphGizmo>();    // optional
+        if (graphGizmo != null)
+        {
+            graphGizmo.Graph = triangulation.MakeGraph();
+        }
     }
 
     private void OnApplicationQuit()
@@ -52,23 +60,55 @@ public class TreeFactory : MonoBehaviour
         triangulation = null;
         kdTree = null;
     }
-
-#endregion Init
+#endregion 
 
 #region Map generation
     private void BuildMap()
     {
-        vertices = new Vector2[nTrees];
+        int nPoints = (nCells + 1) * (nCells + 1);
+        vertices = new Vector2[nPoints];
         kdTree = new KDTree();
-        GenerateTrees();
+        GeneratePoints();
         Triangulate();
+//        graph = triangulation.MakeGraph();
     }
 
-    private void GenerateTrees()
+    private void GeneratePoints()
     {
         float minDistance = Mathf.Min(bounds.width / 2, bounds.height / 2);
 
-        for (int i = 0; i < nTrees; i++)
+        int k = 0;
+
+        // add points around edge
+        for (int i = 0; i <= nCells; i++)
+        {
+            float x = i * 1f / nCells;
+
+            vertices[k] = bounds.Point(x,0);
+            kdTree.AddPoint(vertices[k]);
+            k++;
+
+            vertices[k] = bounds.Point(x,1);
+            kdTree.AddPoint(vertices[k]);
+            k++;
+        }
+
+        for (int i = 1; i < nCells; i++)
+        {
+            float y = i * 1f / nCells;
+
+            vertices[k] = bounds.Point(0,y);
+            kdTree.AddPoint(vertices[k]);
+            k++;
+
+            vertices[k] = bounds.Point(1,y);
+            kdTree.AddPoint(vertices[k]);
+            k++;
+        }
+
+        // add internal points
+        int nPoints = (nCells+1) * (nCells+1);
+        for (; k < nPoints; k++)
         {
             Vector3 pos;
             int tries = 0;
@@ -86,21 +126,23 @@ public class TreeFactory : MonoBehaviour
 
                 pos = bounds.RandomPoint(rng);
 
-            } while (NearestTreeDistance(pos) < minDistance);
+            } while (NearestDistance(pos) < minDistance);
 
-            // create a tree
-
-            TreeShadow tree = Instantiate(
-                treePrefab, transform.position, Quaternion.identity, transform);
-            tree.transform.localPosition = pos;
-            vertices[i] = pos;
+            // create a point
+            vertices[k] = pos;
             kdTree.AddPoint(pos);
         }
 
         kdTree.Rebuild();
+
+        for (int i = 0; i < vertices.Length; i++)
+        {
+            Transform point = Instantiate(pointPrefab, transform.position, Quaternion.identity, transform);
+            point.transform.localPosition = vertices[i];            
+        }
     }
 
-    private float NearestTreeDistance(Vector2 pos) 
+    private float NearestDistance(Vector2 pos) 
     {
         Vector2? v = kdTree.Nearest(pos); 
         return v == null ? float.PositiveInfinity : Vector2.Distance(v.Value, pos);
@@ -120,12 +162,9 @@ public class TreeFactory : MonoBehaviour
 #endregion
 
 
-#region Public Methods
-    public Vector2? NearestTree(Vector2 pos) 
+#region Update
+    void Update()
     {
-        pos = transform.InverseTransformPoint(pos);
-        Vector2? v = kdTree.Nearest(pos);       
-        return v == null ? null : transform.TransformPoint(v.Value);
     }
 #endregion
 
@@ -135,7 +174,6 @@ public class TreeFactory : MonoBehaviour
     [SerializeField] private bool drawBoundsGizmo = false;
     [SerializeField] private bool drawKDTreeGizmo = false;
     [SerializeField] private bool drawTriangulationGizmo = false;
-    [SerializeField] private bool drawVoronoi = true;
 
     void OnDrawGizmos()
     {
@@ -158,7 +196,6 @@ public class TreeFactory : MonoBehaviour
                 Gizmos.color = Color.cyan;
                 triangulation.DrawGizmo(transform);
             }
-
         }
                 
     }

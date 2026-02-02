@@ -18,8 +18,8 @@ public class HalfEdge
     public HalfEdge flip;
     public Face face;
 
-    public string Name => $"{fromVertex.name},{flip.fromVertex.name}";
     public Vector2 Direction => next.fromVertex - fromVertex;
+    public override string ToString() => $"E[{fromVertex},{flip.fromVertex}]";
     
     internal HalfEdge(Vertex fromVertex)
     {
@@ -69,5 +69,6 @@ public class HalfEdge
         Vector2 q = Nearest(p);
         return Vector2.Distance(p, q);
     }
+
 }
 }

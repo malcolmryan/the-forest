@@ -9,6 +9,7 @@
  * For Unity Version: 6.0
  */
 
+using System;
 using UnityEngine;
 using System.Collections.Generic;
 
@@ -19,20 +20,22 @@ namespace WordsOnPlay.Geometry
         private HashSet<Vertex> vertices;
         public IEnumerable<Vertex> Vertices => vertices;
 
-        private HashSet<(HalfEdge, HalfEdge)> edges;
-        public IEnumerable<(HalfEdge forward, HalfEdge backward)> Edges => edges;
-        private Dictionary<(Vertex, Vertex), (HalfEdge forward, HalfEdge backward)> edgeMap;
+        private HashSet<HalfEdge> edges;
+        public IEnumerable<HalfEdge> Edges => edges;
 
-        private HashSet<Face> faces;
+        private HashSet<Face> faces;    // internal faces only
         public IEnumerable<Face> Faces => faces;
+        
+        private Face exterior;          // external face
+        public Face Exterior => exterior;
 
 #region Constructors
         public Graph()
         {
             vertices = new HashSet<Vertex>();
-            edges = new HashSet<(HalfEdge, HalfEdge)>();
-            edgeMap = new Dictionary<(Vertex, Vertex), (HalfEdge, HalfEdge)>();
+            edges = new HashSet<HalfEdge>();
             faces = new HashSet<Face>();
+            exterior = new Face();
         }
 #endregion
 
@@ -66,81 +69,37 @@ namespace WordsOnPlay.Geometry
 #endregion
 
 #region Edges
-        public (HalfEdge forward, HalfEdge backward) AddEdge(Vertex a, Vertex b) 
+        public HalfEdge AddEdge(Vertex va) 
         {
-            HalfEdge e = new HalfEdge(a);
-            e.flip = new HalfEdge(b);
-            e.flip.flip = e;
+            HalfEdge e = new HalfEdge(va);
+            edges.Add(e);
+            return e;
+        }
 
-            var edge = (e, e.flip);
-            edges.Add(edge);
-            edgeMap[(a,b)] = edge;
+        public (HalfEdge forward, HalfEdge backward) AddEdgePair(Vertex va, Vertex vb) 
+        {
+            HalfEdge eAB = new HalfEdge(va);
+            HalfEdge eBA = new HalfEdge(vb);
+            eAB.flip = eBA;
+            eBA.flip = eAB;
+
+            var edge = (eAB, eBA);
+            edges.Add(eAB);
+            edges.Add(eBA);
 
             return edge;
         }
 
         public bool RemoveEdge(HalfEdge e)
         {
-            return RemoveEdge1(e) || RemoveEdge1(e.flip);
+            return edges.Remove(e);
         }
 
-        private bool RemoveEdge1(HalfEdge e)
+        public bool RemoveEdgePair(HalfEdge e)
         {
-            var edge = (e, e.flip);
-            if (edges.Contains(edge))
-            {
-                Vertex va = e.fromVertex;
-                Vertex vb = e.flip.fromVertex;
-                edgeMap.Remove((va,vb));                
-                return edges.Remove(edge);
-            }
-
-            return false;            
+            return edges.Remove(e) && edges.Remove(e.flip);
         }
 
-        public bool RemoveEdge(Vertex va, Vertex vb)
-        {
-            return RemoveEdge1(va,vb) || RemoveEdge1(vb,va);            
-        }
-
-        private bool RemoveEdge1(Vertex va, Vertex vb)
-        {
-            if (edgeMap.ContainsKey((va,vb)))
-            {
-                return RemoveEdge1(edgeMap[(va,vb)].forward);
-            }
-            return false;
-        }
-
-        public bool HasEdge(Vertex va, Vertex vb)
-        {
-            return edgeMap.ContainsKey((va, vb)) || edgeMap.ContainsKey((vb, va));
-        }
-
-        public (HalfEdge forward, HalfEdge backward)? GetEdge(Vertex va, Vertex vb)
-        {
-            if (edgeMap.ContainsKey((va, vb)))
-            {
-                return edgeMap[(va, vb)];
-            }
-            else if (edgeMap.ContainsKey((vb, va)))
-            {
-                var e = edgeMap[(vb, va)];
-                return (e.backward, e.forward); // flip the edge to match the vertex ordering
-            }
-
-            return null;
-        }
-
-        public (HalfEdge forward, HalfEdge backward) GetOrAddEdge(Vertex va, Vertex vb)
-        {
-            var edge = GetEdge(va, vb);
-            if (edge == null)
-            {
-                return AddEdge(va, vb);
-            }
-            return edge.Value;
-        }
 
 #endregion
 

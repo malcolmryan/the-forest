@@ -7,13 +7,20 @@
 
 using UnityEngine;
 using System;
+using System.Text;
 
 namespace WordsOnPlay.Geometry
 {
 
+[Serializable]
 public class Face 
 {
     public HalfEdge edge;
+
+    internal Face()
+    {
+        this.edge = null;
+    }
 
     internal Face(HalfEdge edge)
     {
@@ -44,6 +51,25 @@ public class Face
         } while (e != edge);
 
         return true;
+    }
+
+    public override string ToString()
+    {
+        StringBuilder sb = new StringBuilder();
+
+        sb.Append("F[");
+        HalfEdge e = edge;
+        if (edge != null)
+        {
+            do
+            {
+                sb.Append(e.fromVertex);
+                e = e.next;
+            } while (e != edge);            
+        }
+        sb.Append("]");
+
+        return sb.ToString();
     }
 }
 
