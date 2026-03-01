@@ -50,23 +50,6 @@ public class TriangulationTest : MonoBehaviour
 #endregion 
 
 #region Update
-    void Update()
-    {
-        if (Input.GetMouseButtonDown(0))
-        {
-            Plane plane = new Plane(transform.forward, transform.position);
-
-            Ray ray =  Camera.main.ScreenPointToRay(Input.mousePosition); 
-
-            float t = 0;
-            
-            if (plane.Raycast(ray, out t)) {
-                AddVertex(ray.GetPoint(t));
-                graphGizmo.Graph = removeRoot ? triangulation.MakeGraph() : triangulation.Graph;
-            }
-        }
-    }
-
     private void AddVertex(Vector3 point, string name = null) 
     {
         if (name == null)

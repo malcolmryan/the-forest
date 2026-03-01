@@ -7,6 +7,7 @@
  */
 
 using System.Collections.Generic;
+using System.Linq;
 
 namespace WordsOnPlay.Geometry
 {
@@ -90,6 +91,7 @@ namespace WordsOnPlay.Geometry
         {
             Dictionary<Face, Face> fMap = new Dictionary<Face, Face>();
             fMap[graph.Exterior] = copy.Exterior;
+            copy.Exterior.edge = eMap[graph.Exterior.edge];
 
             foreach (Face fOld in graph.Faces)
             {
@@ -168,8 +170,22 @@ namespace WordsOnPlay.Geometry
 
             if (edge.face.edge == edge)
             {
-                // set to null if this is the last edge
-                edge.face.edge = edge.next == edge ? null : edge.next;
+                // find a valid edge
+                if (edge.next == edge.flip)
+                {
+                    if (edge.flip.next == edge)
+                    {
+                        edge.face.edge = null;    
+                    }
+                    else
+                    {
+                        edge.face.edge = edge.flip.next;
+                    }
+                }
+                else
+                {
+                    edge.face.edge = edge.next; 
+                }
             }
 
             graph.RemoveEdge(edge);
@@ -200,6 +216,7 @@ namespace WordsOnPlay.Geometry
 
                 graph.RemoveFace(deletedFace);
             }
+
         }
 
         private static HalfEdge PreviousEdge(Graph graph, HalfEdge edge)
@@ -212,6 +229,119 @@ namespace WordsOnPlay.Geometry
             }
 
             return ePrev;
+        }
+
+#endregion
+
+#region Verify structure
+
+        public static Dictionary<Vertex, string> VerifyVertices(Graph graph, Dictionary<Vertex, string> dest)
+        {
+            foreach (Vertex v in graph.Vertices)
+            {       
+                dest[v] = VerifyVertex(graph, v);
+            }
+
+            return dest;
+        }
+
+        public static string VerifyVertex(Graph graph, Vertex vertex)
+        {
+            if (vertex.edge == null)
+            {
+                return $"{vertex}.edge == null";
+            }
+            else 
+            {
+                HalfEdge e = vertex.edge;
+
+                do
+                {
+                    if (!graph.Edges.Contains(e))
+                    {
+                        return $"{e} is not in graph";
+                    }
+                    if (e.fromVertex != vertex)
+                    {
+                        return $"{e}.fromVertex == {e.fromVertex} != {vertex}";
+                    }
+                    e = e.flip.next;
+                }   
+                while (e != vertex.edge);                 
+            }
+            return null;
+        }
+
+        public static Dictionary<HalfEdge, string> VerifyEdges(Graph graph, Dictionary<HalfEdge, string> dest)
+        {
+            foreach (HalfEdge e in graph.Edges)
+            {
+                dest[e] = VerifyEdge(graph, e);
+            }
+
+            return dest;
+        }
+
+        public static string VerifyEdge(Graph graph, HalfEdge edge)
+        {
+            if (edge.flip == null)
+            {
+                return $"{edge}.flip == null";
+            }
+            else if (edge.flip.flip != edge)
+            {
+                return $"{edge}.flip.flip == {edge.flip.flip} != {edge}";
+            }
+
+            if (edge.fromVertex == null)
+            {
+                return $"{edge}.fromVertex == null";
+            }
+
+            if (edge.face == null)
+            {
+                return $"{edge}.face == null";
+            }
+
+            return null;
+        }
+
+        public static Dictionary<Face, string> VerifyFaces(Graph graph, Dictionary<Face, string> dest)
+        {
+            dest[graph.Exterior] = VerifyFace(graph, graph.Exterior);
+
+            foreach (Face f in graph.Faces)
+            {
+                dest[f] = VerifyFace(graph, f);
+            }
+
+            return dest;
+        }
+
+        public static string VerifyFace(Graph graph, Face face)
+        {
+            if (face.edge == null)
+            {
+                return $"{face}.edge == null";
+            }
+            else
+            {   
+                HalfEdge e = face.edge;
+                do
+                {
+                    if (!graph.Edges.Contains(e))
+                    {
+                        return $"{e} is not in graph";
+                    }
+                    if (e.face != face)
+                    {
+                        return $"{e}.face == {e.face} != {face}";
+                    }
+                    e = e.next;
+                } while (e != face.edge);
+            }
+
+            return null;
         }
 
 #endregion

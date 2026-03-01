@@ -104,6 +104,7 @@ public partial class Triangulation : IEnumerable<Triangle>
             AddVertex(v);
             yield return FlipEdgesCR();
         }
+        Verify();
         isRunning = false;
     }
 
@@ -115,6 +116,43 @@ public partial class Triangulation : IEnumerable<Triangle>
             AddVertex(v);
             FlipEdges();
         }
+
+        Verify();
+    }
+
+    public void Verify()
+    {
+        var vertexErrors = new Dictionary<Vertex,string>();
+        var edgeErrors = new Dictionary<HalfEdge,string>(); 
+        var faceErrors = new Dictionary<Face,string>();         
+
+        GraphOperations.VerifyVertices(graph, vertexErrors);
+        foreach (Vertex v in vertexErrors.Keys)
+        {
+            if (vertexErrors[v] != null)
+            {
+                Debug.LogWarning($"[Triangulation.Verify] {v}: {vertexErrors[v]}");
+            }            
+        }
+
+        GraphOperations.VerifyEdges(graph, edgeErrors);
+        foreach (HalfEdge e in edgeErrors.Keys)
+        {
+            if (edgeErrors[e] != null)
+            {
+                Debug.LogWarning($"[Triangulation.Verify] {e}: {edgeErrors[e]}");
+            }            
+        }
+
+        GraphOperations.VerifyFaces(graph, faceErrors);
+        foreach (Face f in faceErrors.Keys)
+        {
+            if (faceErrors[f] != null)
+            {
+                Debug.LogWarning($"[Triangulation.Verify] {f}: {faceErrors[f]}");
+            }            
+        }
+
     }
 
     public Graph MakeGraph() 
@@ -123,11 +161,11 @@ public partial class Triangulation : IEnumerable<Triangle>
 
         for (int i = 0; i < 3; i++)
         {
-            Vertex v = GraphOperations.FindVertex(clone, root.edges[0].fromVertex.name);
+            Vertex v = GraphOperations.FindVertex(clone, root.edges[i].fromVertex.name);
             GraphOperations.DeleteVertex(clone, v);            
         }
 
-        return graph;
+        return clone;
     }
 #endregion
 
@@ -158,6 +196,8 @@ public partial class Triangulation : IEnumerable<Triangle>
         eab.face = face;
         ebc.face = face;
         eca.face = face;
+
+        graph.Exterior.edge = eba;
 
         ecb.face = graph.Exterior;
         eba.face = graph.Exterior;
@@ -193,6 +233,8 @@ public partial class Triangulation : IEnumerable<Triangle>
         (eva, eav) = graph.AddEdgePair(v, a);
         (evb, ebv) = graph.AddEdgePair(v, b);
         (evc, ecv) = graph.AddEdgePair(v, c);
+
+        v.edge = eva;
 
         Face fvab = CreateFace(eab, ebv, eva);
         Face fvbc = CreateFace(ebc, ecv, evb);
@@ -251,7 +293,13 @@ public partial class Triangulation : IEnumerable<Triangle>
 
     private void FlipEdge(HalfEdge e)
     {
-        graph.RemoveEdgePair(e);
+        //     D                   D
+        //    /|\                 / \
+        //   / | \               /   \
+        //  A  |  C    ===>     A --- C 
+        //   \ | /               \   /
+        //    \|/                 \ /
+        //     B                   B
 
         HalfEdge ebd = e;
         HalfEdge eda = ebd.next;
@@ -261,21 +309,19 @@ public partial class Triangulation : IEnumerable<Triangle>
         HalfEdge ebc = edb.next;
         HalfEdge ecd = ebc.next;
 
-        //     D                   D
-        //    /|\                 / \
-        //   / | \               /   \
-        //  A  |  C    ===>     A --- C 
-        //   \ | /               \   /
-        //    \|/                 \ /
-        //     B                   B
+        Vertex va = eab.fromVertex;
+        Vertex vb = ebc.fromVertex;
+        Vertex vc = ecd.fromVertex;
+        Vertex vd = eda.fromVertex;
+
+        graph.RemoveEdgePair(ebd);
+        vb.edge = ebc;
+        vd.edge = eda;
 
         Face fbda = ebd.face;
         Face fdbc = edb.face;
         graph.RemoveFace(fbda);
         graph.RemoveFace(fdbc);
-
-        Vertex va = eab.fromVertex;
-        Vertex vc = ecd.fromVertex;
 
         var (eac, eca) = graph.AddEdgePair(va, vc);
         Debug.Log($"[Triangulation.FlipEdge] Flipping {e} to {eac}");

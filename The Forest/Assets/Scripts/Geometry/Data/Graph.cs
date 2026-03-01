@@ -35,7 +35,7 @@ namespace WordsOnPlay.Geometry
             vertices = new HashSet<Vertex>();
             edges = new HashSet<HalfEdge>();
             faces = new HashSet<Face>();
-            exterior = new Face();
+            exterior = new Face();  // exterior is not in faces
         }
 #endregion
 
@@ -97,10 +97,8 @@ namespace WordsOnPlay.Geometry
 
         public bool RemoveEdgePair(HalfEdge e)
         {
-            return edges.Remove(e) && edges.Remove(e.flip);
+            return RemoveEdge(e) && RemoveEdge(e.flip);
         }
-
-
 #endregion
 
 
